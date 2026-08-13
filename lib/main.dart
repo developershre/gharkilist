@@ -1,184 +1,275 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import 'models/ghar_item.dart';
+import 'models/inventory_item.dart';
+import 'models/inventory_list.dart';
 import 'services/database_helper.dart';
+import 'views/catalog_browse_view.dart';
+import 'views/empty_state_view.dart';
+import 'views/inventory_home_view.dart';
+import 'views/inventory_switcher_sheet.dart';
+import 'views/scan_capture_view.dart';
+import 'views/translator_view.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MyApp());
+  runApp(const BhandarKhataApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class BhandarKhataApp extends StatefulWidget {
+  const BhandarKhataApp({super.key});
+
+  static BhandarKhataAppState of(BuildContext context) =>
+      context.findAncestorStateOfType<BhandarKhataAppState>()!;
+
+  @override
+  State<BhandarKhataApp> createState() => BhandarKhataAppState();
+}
+
+class BhandarKhataAppState extends State<BhandarKhataApp> {
+  ThemeMode _themeMode = ThemeMode.light;
+
+  void toggleTheme() {
+    setState(() {
+      _themeMode =
+          _themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
+    });
+  }
+
+  ThemeMode get themeMode => _themeMode;
 
   @override
   Widget build(BuildContext context) {
     return ShadApp(
-      title: 'GharKiList',
+      title: 'Bhandar Khata',
+      theme: ShadThemeData(
+        brightness: Brightness.light,
+        colorScheme: const ShadSlateColorScheme.light(),
+        textTheme: ShadTextTheme(
+          family: GoogleFonts.inter().fontFamily,
+        ),
+      ),
       darkTheme: ShadThemeData(
         brightness: Brightness.dark,
         colorScheme: const ShadSlateColorScheme.dark(),
+        textTheme: ShadTextTheme(
+          family: GoogleFonts.inter().fontFamily,
+        ),
       ),
-      themeMode: ThemeMode.dark,
-      home: const MyHomePage(),
+      themeMode: _themeMode,
+      home: const MainHomeScreen(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key});
+class MainHomeScreen extends StatefulWidget {
+  const MainHomeScreen({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<MainHomeScreen> createState() => _MainHomeScreenState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  final TextEditingController _itemController = TextEditingController();
-  List<GharItem> _items = [];
-  bool _isLoading = true;
+class _MainHomeScreenState extends State<MainHomeScreen> {
+  InventoryList? _activeList;
+  List<InventoryItem> _inventoryItems = [];
+  bool _isInitialLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _refreshItems();
+    _initialLoad();
   }
 
-  @override
-  void dispose() {
-    _itemController.dispose();
-    super.dispose();
+  Future<void> _initialLoad() async {
+    final lists = await DatabaseHelper.instance.getAllInventories();
+    final defaultList = lists.isNotEmpty
+        ? lists.firstWhere((l) => l.isDefault, orElse: () => lists.first)
+        : InventoryList(id: 1, name: 'रसोई का सामान (Kitchen)', iconEmoji: '🏠', isDefault: true);
+
+    final items = await DatabaseHelper.instance.getInventoryItemsForList(defaultList.id ?? 1);
+
+    if (mounted) {
+      setState(() {
+        _activeList = defaultList;
+        _inventoryItems = items;
+        _isInitialLoading = false;
+      });
+    }
   }
 
-  Future<void> _refreshItems() async {
-    setState(() => _isLoading = true);
-    final data = await DatabaseHelper.instance.getAllItems();
+  Future<void> _refreshInventory() async {
+    if (_activeList?.id == null) return;
+    final items = await DatabaseHelper.instance.getInventoryItemsForList(_activeList!.id!);
+    if (mounted) {
+      setState(() {
+        _inventoryItems = items;
+      });
+    }
+  }
+
+  void _switchActiveList(InventoryList newList) async {
     setState(() {
-      _items = data;
-      _isLoading = false;
+      _activeList = newList;
     });
+    await _refreshInventory();
   }
 
-  Future<void> _addItem() async {
-    final text = _itemController.text.trim();
-    if (text.isEmpty) return;
-
-    final newItem = GharItem(title: text);
-    await DatabaseHelper.instance.insertItem(newItem);
-    _itemController.clear();
-    await _refreshItems();
+  void _openScanView() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ScanCaptureView(
+          onItemAdded: (item) async {
+            final itemWithList = item.copyWith(inventoryId: _activeList?.id ?? 1);
+            await DatabaseHelper.instance.addInventoryItem(itemWithList);
+            _refreshInventory();
+          },
+        ),
+      ),
+    );
   }
 
-  Future<void> _toggleItem(GharItem item) async {
-    if (item.id == null) return;
-    await DatabaseHelper.instance.toggleItemStatus(item.id!, !item.isCompleted);
-    await _refreshItems();
+  void _openBrowseView() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CatalogBrowseView(
+          onItemAdded: (item) async {
+            final itemWithList = item.copyWith(inventoryId: _activeList?.id ?? 1);
+            await DatabaseHelper.instance.addInventoryItem(itemWithList);
+            _refreshInventory();
+          },
+        ),
+      ),
+    );
   }
 
-  Future<void> _deleteItem(int id) async {
-    await DatabaseHelper.instance.deleteItem(id);
-    await _refreshItems();
+  void _openTranslatorView() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TranslatorView(
+          onItemAdded: (item) async {
+            final itemWithList = item.copyWith(inventoryId: _activeList?.id ?? 1);
+            await DatabaseHelper.instance.addInventoryItem(itemWithList);
+            _refreshInventory();
+          },
+        ),
+      ),
+    );
+  }
+
+  void _openSwitcherSheet() {
+    if (_activeList == null) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => InventorySwitcherSheet(
+        activeList: _activeList!,
+        onListSelected: _switchActiveList,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final completedCount = _items.where((i) => i.isCompleted).length;
+    final appState = BhandarKhataApp.of(context);
+    final isDark = appState.themeMode == ThemeMode.dark;
+
+    if (_isInitialLoading || _activeList == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('GharKiList'),
-        centerTitle: true,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            ShadCard(
-              title: const Text('Add Household Item'),
-              description: const Text('Items will be stored in local SQLite database.'),
-              footer: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  ShadButton(
-                    onPressed: _addItem,
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.add, size: 18),
-                        SizedBox(width: 6),
-                        Text('Add Item'),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12.0),
-                child: ShadInput(
-                  controller: _itemController,
-                  placeholder: const Text('Enter grocery or item name...'),
-                  onSubmitted: (_) => _addItem(),
-                ),
+        backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+        elevation: 0,
+        title: InkWell(
+          onTap: _openSwitcherSheet,
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
               ),
             ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  'Your Ghar List',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                Text(_activeList!.iconEmoji, style: const TextStyle(fontSize: 22)),
+                const SizedBox(width: 8),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 160),
+                  child: Text(
+                    _activeList!.name,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
+                  ),
                 ),
-                ShadBadge(
-                  child: Text('$completedCount / ${_items.length} Completed'),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.arrow_drop_down,
+                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _items.isEmpty
-                      ? const Center(
-                          child: Text(
-                            'No items added yet. Add your first item above!',
-                            style: TextStyle(color: Colors.grey),
-                          ),
-                        )
-                      : ListView.builder(
-                          itemCount: _items.length,
-                          itemBuilder: (context, index) {
-                            final item = _items[index];
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 8.0),
-                              child: ListTile(
-                                leading: Checkbox(
-                                  value: item.isCompleted,
-                                  onChanged: (_) => _toggleItem(item),
-                                ),
-                                title: Text(
-                                  item.title,
-                                  style: TextStyle(
-                                    decoration: item.isCompleted
-                                        ? TextDecoration.lineThrough
-                                        : null,
-                                    color: item.isCompleted ? Colors.grey : null,
-                                  ),
-                                ),
-                                subtitle: Text('Added ${item.createdAt.toString().split('.')[0]}'),
-                                trailing: IconButton(
-                                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                                  onPressed: item.id != null
-                                      ? () => _deleteItem(item.id!)
-                                      : null,
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-            ),
-          ],
+          ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.g_translate, color: Color(0xFF38BDF8), size: 24),
+            tooltip: 'हिंदी / English अनुवाद् (Translator)',
+            onPressed: _openTranslatorView,
+          ),
+          IconButton(
+            icon: Icon(
+              isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+              color: isDark ? const Color(0xFFFACC15) : const Color(0xFF334155),
+              size: 24,
+            ),
+            tooltip: isDark ? 'Light Mode' : 'Dark Mode',
+            onPressed: appState.toggleTheme,
+          ),
+        ],
       ),
+      body: _inventoryItems.isEmpty
+          ? EmptyStateView(
+              activeList: _activeList!,
+              onScanTap: _openScanView,
+              onBrowseTap: _openBrowseView,
+              onQuickAddCatalogItem: (item) async {
+                final inv = InventoryItem(
+                  inventoryId: _activeList!.id ?? 1,
+                  catalogId: item.id,
+                  customName: item.nameEn,
+                  nameHi: item.nameHi,
+                  category: item.category,
+                  quantity: 1.0,
+                  unit: item.defaultUnit,
+                  catalogItem: item,
+                );
+                await DatabaseHelper.instance.addInventoryItem(inv);
+                _refreshInventory();
+              },
+            )
+          : InventoryHomeView(
+              activeList: _activeList!,
+              items: _inventoryItems,
+              onRefresh: _refreshInventory,
+              onListChanged: _switchActiveList,
+              onAddScanTap: _openScanView,
+              onAddBrowseTap: _openBrowseView,
+            ),
     );
   }
 }
