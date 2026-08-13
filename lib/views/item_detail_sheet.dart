@@ -1,17 +1,21 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import '../models/catalog_item.dart';
 import '../models/inventory_item.dart';
+import '../services/localization_service.dart';
 
 class ItemDetailSheet extends StatefulWidget {
   final CatalogItem catalogItem;
   final String? capturedPhotoPath;
+  final AppLanguage language;
   final Function(InventoryItem item) onSave;
 
   const ItemDetailSheet({
     super.key,
     required this.catalogItem,
     this.capturedPhotoPath,
+    this.language = AppLanguage.english,
     required this.onSave,
   });
 
@@ -20,55 +24,77 @@ class ItemDetailSheet extends StatefulWidget {
 }
 
 class _ItemDetailSheetState extends State<ItemDetailSheet> {
-  late double _quantity;
-  late String _unit;
+  late TextEditingController _customNameController;
+  late TextEditingController _quantityController;
+  late TextEditingController _priceController;
+  late String _selectedUnit;
   bool _isLow = false;
   bool _isOut = false;
-  late TextEditingController _nameController;
 
   @override
   void initState() {
     super.initState();
-    _quantity = 1.0;
-    _unit = widget.catalogItem.defaultUnit;
-    _nameController = TextEditingController(text: widget.catalogItem.nameEn);
+    final displayName = LocalizationService.getItemName(
+      widget.catalogItem.nameEn,
+      widget.catalogItem.nameHi,
+      widget.language,
+    );
+    _customNameController = TextEditingController(text: displayName);
+    _quantityController = TextEditingController(text: '1');
+    _priceController = TextEditingController();
+    _selectedUnit = widget.catalogItem.defaultUnit;
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
+    _customNameController.dispose();
+    _quantityController.dispose();
+    _priceController.dispose();
     super.dispose();
   }
 
-  void _increment() {
-    setState(() {
-      _quantity += (_unit == 'g' || _unit == 'ml') ? 100 : 1;
-    });
-  }
+  void _handleSave() {
+    final qty = double.tryParse(_quantityController.text) ?? 1.0;
+    final price = double.tryParse(_priceController.text);
+    final customName = _customNameController.text.trim();
 
-  void _decrement() {
-    if (_quantity > 0.5) {
-      setState(() {
-        _quantity -= (_unit == 'g' || _unit == 'ml') ? 100 : 1;
-        if (_quantity < 0) _quantity = 0;
-      });
-    }
+    final item = InventoryItem(
+      inventoryId: 1,
+      catalogId: widget.catalogItem.id,
+      customName: customName.isNotEmpty ? customName : widget.catalogItem.nameEn,
+      nameHi: widget.catalogItem.nameHi,
+      category: widget.catalogItem.category,
+      quantity: qty,
+      unit: _selectedUnit,
+      estimatedPrice: price,
+      isLow: _isLow,
+      isOut: _isOut,
+      capturedPhotoPath: widget.capturedPhotoPath,
+      catalogItem: widget.catalogItem,
+    );
+
+    widget.onSave(item);
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final isHindi = widget.language == AppLanguage.hindi;
+
+    final bgColor = isDark ? const Color(0xFF0F172A) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1);
+    final displayName = LocalizationService.getItemName(widget.catalogItem.nameEn, widget.catalogItem.nameHi, widget.language);
 
     return Container(
       padding: EdgeInsets.only(
-        left: 24,
-        right: 24,
-        top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        left: 20,
+        right: 20,
+        top: 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
       ),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF18181B) : Colors.white,
+        color: bgColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
@@ -88,28 +114,26 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
           const SizedBox(height: 16),
           Row(
             children: [
-              Text(
-                widget.catalogItem.iconEmoji,
-                style: const TextStyle(fontSize: 36),
-              ),
-              const SizedBox(width: 12),
+              Text(widget.catalogItem.iconEmoji, style: const TextStyle(fontSize: 38)),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      widget.catalogItem.nameEn,
+                      displayName,
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : Colors.black87,
+                        color: isDark ? Colors.white : const Color(0xFF0F172A),
                       ),
                     ),
                     Text(
-                      widget.catalogItem.nameHi,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.amber,
+                      widget.catalogItem.category,
+                      style: TextStyle(
+                        color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7),
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],
@@ -117,151 +141,131 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
               ),
             ],
           ),
+          const SizedBox(height: 16),
+
           if (widget.capturedPhotoPath != null) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.camera_alt, color: Colors.green, size: 16),
-                  SizedBox(width: 6),
-                  Text(
-                    'Photo linked (building training dataset)',
-                    style: TextStyle(color: Colors.green, fontSize: 12),
-                  ),
-                ],
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.file(
+                File(widget.capturedPhotoPath!),
+                height: 120,
+                width: double.infinity,
+                fit: BoxFit.cover,
               ),
             ),
+            const SizedBox(height: 16),
           ],
-          const SizedBox(height: 20),
-          const Text('Quantity & Unit', style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
+
+          Text(isHindi ? 'सामान का नाम' : 'Item Name', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 6),
+          ShadInput(
+            controller: _customNameController,
+            placeholder: Text(isHindi ? 'सामान का नाम दर्ज करें' : 'Enter custom item name'),
+          ),
+          const SizedBox(height: 14),
+
           Row(
             children: [
-              Container(
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: isDark ? Colors.grey.shade700 : Colors.grey.shade400,
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
+              Expanded(
+                flex: 2,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.remove),
-                      onPressed: _decrement,
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                      child: Text(
-                        _quantity % 1 == 0
-                            ? _quantity.toInt().toString()
-                            : _quantity.toStringAsFixed(1),
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.add),
-                      onPressed: _increment,
+                    Text(isHindi ? 'मात्रा' : 'Quantity', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 6),
+                    ShadInput(
+                      controller: _quantityController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      placeholder: const Text('1'),
                     ),
                   ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Wrap(
-                  spacing: 6,
-                  children: widget.catalogItem.allowedUnits.map((u) {
-                    final isSelected = u == _unit;
-                    return ChoiceChip(
-                      label: Text(u),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        if (selected) {
-                          setState(() {
-                            _unit = u;
-                          });
-                        }
-                      },
-                    );
-                  }).toList(),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          const Text('Stock Status', style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: FilterChip(
-                  avatar: Icon(
-                    Icons.warning_amber_rounded,
-                    color: _isLow ? Colors.black : Colors.amber,
-                    size: 18,
-                  ),
-                  label: const Text('Running Low'),
-                  selected: _isLow,
-                  selectedColor: Colors.amber,
-                  onSelected: (val) {
-                    setState(() {
-                      _isLow = val;
-                      if (val) _isOut = false;
-                    });
-                  },
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: FilterChip(
-                  avatar: Icon(
-                    Icons.error_outline,
-                    color: _isOut ? Colors.white : Colors.redAccent,
-                    size: 18,
-                  ),
-                  label: const Text('Out of Stock'),
-                  selected: _isOut,
-                  selectedColor: Colors.redAccent,
-                  onSelected: (val) {
-                    setState(() {
-                      _isOut = val;
-                      if (val) _isLow = false;
-                    });
-                  },
+                flex: 2,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(isHindi ? 'इकाई (Unit)' : 'Unit', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 6),
+                    DropdownButtonFormField<String>(
+                      initialValue: _selectedUnit,
+                      decoration: InputDecoration(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: borderColor),
+                        ),
+                      ),
+                      items: widget.catalogItem.allowedUnits.map((u) {
+                        return DropdownMenuItem(value: u, child: Text(u));
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) setState(() => _selectedUnit = val);
+                      },
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 14),
+
+          Text(isHindi ? 'अनुमानित कीमत (₹) (Optional)' : 'Estimated Price (₹) (Optional)', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 6),
+          ShadInput(
+            controller: _priceController,
+            keyboardType: TextInputType.number,
+            placeholder: const Text('e.g. 120'),
+          ),
+          const SizedBox(height: 16),
+
+          Row(
+            children: [
+              ChoiceChip(
+                side: BorderSide(color: _isLow ? const Color(0xFFF59E0B) : borderColor),
+                label: Text(isHindi ? '🟡 कम है' : '🟡 Low'),
+                selected: _isLow,
+                selectedColor: const Color(0xFFF59E0B),
+                onSelected: (val) {
+                  setState(() {
+                    _isLow = val;
+                    if (val) _isOut = false;
+                  });
+                },
+              ),
+              const SizedBox(width: 10),
+              ChoiceChip(
+                side: BorderSide(color: _isOut ? const Color(0xFFEF4444) : borderColor),
+                label: Text(isHindi ? '🔴 खत्म है' : '🔴 Out of Stock'),
+                selected: _isOut,
+                selectedColor: const Color(0xFFEF4444),
+                onSelected: (val) {
+                  setState(() {
+                    _isOut = val;
+                    if (val) _isLow = false;
+                  });
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
           SizedBox(
             width: double.infinity,
             height: 48,
-            child: ShadButton(
-              onPressed: () {
-                final item = InventoryItem(
-                  catalogId: widget.catalogItem.id,
-                  customName: widget.catalogItem.nameEn,
-                  nameHi: widget.catalogItem.nameHi,
-                  category: widget.catalogItem.category,
-                  quantity: _quantity,
-                  unit: _unit,
-                  isLow: _isLow,
-                  isOut: _isOut,
-                  capturedPhotoPath: widget.capturedPhotoPath,
-                  catalogItem: widget.catalogItem,
-                );
-                widget.onSave(item);
-                Navigator.pop(context);
-              },
-              child: const Text('Save to Pantry Inventory'),
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0F172A),
+                foregroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              onPressed: _handleSave,
+              child: Text(
+                isHindi ? 'सूची में जोड़ें' : 'Save to Inventory List',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
             ),
           ),
         ],

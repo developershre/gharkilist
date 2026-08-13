@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
@@ -18,117 +19,179 @@ class ScanCaptureView extends StatefulWidget {
 
 class _ScanCaptureViewState extends State<ScanCaptureView> {
   final ImagePicker _picker = ImagePicker();
-  bool _isCapturing = false;
+  XFile? _capturedFile;
+  bool _isProcessing = false;
 
-  Future<void> _capturePhoto(ImageSource source) async {
-    setState(() => _isCapturing = true);
-    try {
-      final XFile? photo = await _picker.pickImage(
-        source: source,
-        maxWidth: 1024,
-        maxHeight: 1024,
-        imageQuality: 85,
-      );
+  Future<void> _takePhoto() async {
+    final XFile? photo = await _picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 85,
+    );
 
-      setState(() => _isCapturing = false);
+    if (photo != null) {
+      setState(() {
+        _capturedFile = photo;
+        _isProcessing = true;
+      });
 
-      if (photo != null && mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => CatalogBrowseView(
-              capturedPhotoPath: photo.path,
-              onItemAdded: (item) {
-                widget.onItemAdded(item);
-              },
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      setState(() => _isCapturing = false);
+      // Simulate fast Pre-AI image processing pipeline delay (300ms)
+      await Future.delayed(const Duration(milliseconds: 300));
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Camera error: $e')),
-        );
+        setState(() {
+          _isProcessing = false;
+        });
+        _navigateToCatalogWithPhoto(photo.path);
       }
     }
   }
 
+  Future<void> _pickFromGallery() async {
+    final XFile? photo = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+    );
+
+    if (photo != null) {
+      setState(() {
+        _capturedFile = photo;
+      });
+      _navigateToCatalogWithPhoto(photo.path);
+    }
+  }
+
+  void _navigateToCatalogWithPhoto(String photoPath) {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CatalogBrowseView(
+          capturedPhotoPath: photoPath,
+          onItemAdded: widget.onItemAdded,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+    final cardBgColor = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1);
+
     return Scaffold(
+      backgroundColor: bgColor,
       appBar: AppBar(
-        title: const Text('Scan Package / Bag (Pre-AI)'),
+        backgroundColor: bgColor,
+        elevation: 0,
+        title: const Text('Camera Scan (फोटो खींचें)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 120,
-                height: 120,
+      body: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          children: [
+            Expanded(
+              child: Container(
+                width: double.infinity,
                 decoration: BoxDecoration(
-                  color: Colors.amber.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
+                  color: cardBgColor,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: borderColor, width: 1.5),
                 ),
-                child: const Icon(
-                  Icons.camera_enhance_outlined,
-                  size: 60,
-                  color: Colors.amber,
-                ),
+                child: _capturedFile != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: Image.file(
+                          File(_capturedFile!.path),
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                    : Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0EA5E9).withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt_outlined,
+                              size: 64,
+                              color: Color(0xFF0EA5E9),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          Text(
+                            'Scan Item Photo',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 24.0),
+                            child: Text(
+                              'Take a photo of any grocery packet or Kirana bag to save it in your inventory!',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 14, color: Colors.grey),
+                            ),
+                          ),
+                        ],
+                      ),
               ),
-              const SizedBox(height: 24),
-              const Text(
-                'Pre-AI Photo Dataset Builder',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Take a photo of your staple package or kirana bag. After capture, pick the item from our catalog to save & label the image for training.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey, fontSize: 13),
-              ),
-              const SizedBox(height: 36),
-              if (_isCapturing)
-                const CircularProgressIndicator()
-              else ...[
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ShadButton(
-                    onPressed: () => _capturePhoto(ImageSource.camera),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.camera_alt, size: 20),
-                        SizedBox(width: 8),
-                        Text('Take Photo with Camera'),
-                      ],
+            ),
+            const SizedBox(height: 24),
+            if (_isProcessing)
+              const Column(
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 12),
+                  Text('Processing image...', style: TextStyle(fontWeight: FontWeight.bold)),
+                ],
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 52,
+                      child: ShadButton.outline(
+                        onPressed: _pickFromGallery,
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.photo_library, size: 20),
+                            SizedBox(width: 8),
+                            Text('Gallery', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ShadButton.outline(
-                    onPressed: () => _capturePhoto(ImageSource.gallery),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.photo_library, size: 20),
-                        SizedBox(width: 8),
-                        Text('Choose from Gallery'),
-                      ],
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: SizedBox(
+                      height: 52,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0F172A),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        icon: const Icon(Icons.camera_alt, size: 22),
+                        label: const Text('Take Photo', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                        onPressed: _takePhoto,
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ],
-          ),
+                ],
+              ),
+          ],
         ),
       ),
     );

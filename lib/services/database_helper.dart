@@ -83,13 +83,15 @@ class DatabaseHelper {
     await _seedDefaultInventories(db);
     await _createIndexes(db);
 
-    // Batch seed catalog
-    final batch = db.batch();
-    for (final item in seedIndianCatalog) {
-      batch.insert('catalog_items', item.toMap(),
-          conflictAlgorithm: ConflictAlgorithm.replace);
-    }
-    await batch.commit(noResult: true);
+    // Fast Single Transaction Batch Seed
+    await db.transaction((txn) async {
+      final batch = txn.batch();
+      for (final item in seedIndianCatalog) {
+        batch.insert('catalog_items', item.toMap(),
+            conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+      await batch.commit(noResult: true);
+    });
   }
 
   Future<void> _ensureTablesExist(Database db) async {
@@ -122,13 +124,15 @@ class DatabaseHelper {
     await _seedDefaultInventories(db);
     await _createIndexes(db);
 
-    // Auto-update catalog items in DB
-    final batch = db.batch();
-    for (final item in seedIndianCatalog) {
-      batch.insert('catalog_items', item.toMap(),
-          conflictAlgorithm: ConflictAlgorithm.replace);
-    }
-    await batch.commit(noResult: true);
+    // Fast Single Transaction Batch Upsert
+    await db.transaction((txn) async {
+      final batch = txn.batch();
+      for (final item in seedIndianCatalog) {
+        batch.insert('catalog_items', item.toMap(),
+            conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+      await batch.commit(noResult: true);
+    });
     _catalogCache = null;
   }
 
@@ -242,7 +246,8 @@ class DatabaseHelper {
       return filtered.toList();
     }
 
-    return filtered.where((item) => item.matchesSearch(query)).toList();
+    final lower = query.trim().toLowerCase();
+    return filtered.where((item) => item.matchesSearch(lower)).toList();
   }
 
   Future<List<String>> getCatalogCategories() async {
@@ -331,19 +336,21 @@ class DatabaseHelper {
 
   Future<void> updateItemsDisplayOrder(List<InventoryItem> items) async {
     final db = await instance.database;
-    final batch = db.batch();
-    for (int i = 0; i < items.length; i++) {
-      final item = items[i];
-      if (item.id != null) {
-        batch.update(
-          'inventory_items',
-          {'display_order': i},
-          where: 'id = ?',
-          whereArgs: [item.id],
-        );
+    await db.transaction((txn) async {
+      final batch = txn.batch();
+      for (int i = 0; i < items.length; i++) {
+        final item = items[i];
+        if (item.id != null) {
+          batch.update(
+            'inventory_items',
+            {'display_order': i},
+            where: 'id = ?',
+            whereArgs: [item.id],
+          );
+        }
       }
-    }
-    await batch.commit(noResult: true);
+      await batch.commit(noResult: true);
+    });
   }
 
   Future<int> toggleStockStatus(int id, {bool? isLow, bool? isOut}) async {

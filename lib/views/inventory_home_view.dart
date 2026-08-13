@@ -5,8 +5,8 @@ import '../models/catalog_item.dart';
 import '../models/inventory_item.dart';
 import '../models/inventory_list.dart';
 import '../services/database_helper.dart';
+import '../services/localization_service.dart';
 import '../services/share_service.dart';
-import 'inventory_switcher_sheet.dart';
 
 final List<CatalogItem> _quickStaplesCache = seedIndianCatalog.where((i) => [
       'grains_atta',
@@ -22,6 +22,7 @@ final List<CatalogItem> _quickStaplesCache = seedIndianCatalog.where((i) => [
 class InventoryHomeView extends StatefulWidget {
   final InventoryList activeList;
   final List<InventoryItem> items;
+  final AppLanguage language;
   final VoidCallback onRefresh;
   final Function(InventoryList newList) onListChanged;
   final VoidCallback onAddScanTap;
@@ -31,6 +32,7 @@ class InventoryHomeView extends StatefulWidget {
     super.key,
     required this.activeList,
     required this.items,
+    required this.language,
     required this.onRefresh,
     required this.onListChanged,
     required this.onAddScanTap,
@@ -59,18 +61,6 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
     }
   }
 
-  void _openSwitcherSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => InventorySwitcherSheet(
-        activeList: widget.activeList,
-        onListSelected: widget.onListChanged,
-      ),
-    );
-  }
-
   Future<void> _instantAddStaple(BuildContext context, CatalogItem catalogItem) async {
     final invItem = InventoryItem(
       inventoryId: widget.activeList.id ?? 1,
@@ -85,10 +75,11 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
     await DatabaseHelper.instance.addInventoryItem(invItem);
     widget.onRefresh();
     if (context.mounted) {
+      final name = LocalizationService.getItemName(catalogItem.nameEn, catalogItem.nameHi, widget.language);
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Added "${catalogItem.nameEn}" to ${widget.activeList.name}!'),
+          content: Text('Added "$name" to ${widget.activeList.name}!'),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -128,6 +119,7 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
   }
 
   void _showAddModal(BuildContext context) {
+    final isHindi = widget.language == AppLanguage.hindi;
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -149,7 +141,7 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Add Item to "${widget.activeList.name}"',
+                isHindi ? 'सामान जोड़ें: "${widget.activeList.name}"' : 'Add Item to "${widget.activeList.name}"',
                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 20),
@@ -162,8 +154,14 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                   ),
                   child: const Icon(Icons.camera_alt_outlined, color: Color(0xFF0EA5E9)),
                 ),
-                title: const Text('Camera Scan (फोटो खींचें)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                subtitle: const Text('Take photo of bag/package', style: TextStyle(fontSize: 13)),
+                title: Text(
+                  isHindi ? 'फोटो खींचें (Camera Scan)' : 'Scan Photo',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                subtitle: Text(
+                  isHindi ? 'पैकेट या बोरी की फोटो लें' : 'Take photo of bag or package',
+                  style: const TextStyle(fontSize: 13),
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   widget.onAddScanTap();
@@ -179,8 +177,14 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                   ),
                   child: const Icon(Icons.search_outlined, color: Color(0xFF6366F1)),
                 ),
-                title: const Text('Browse 200+ Catalog (सूची देखें)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                subtitle: const Text('Search Atta, Dal, Spices, Dairy, Pooja, etc.', style: TextStyle(fontSize: 13)),
+                title: Text(
+                  isHindi ? 'सूची देखें (Browse Catalog)' : 'Browse 200+ Catalog',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                subtitle: Text(
+                  isHindi ? 'आटा, दाल, मसाले, पूजा सामान खोजें' : 'Search Atta, Dal, Spices, Dairy, Pooja, etc.',
+                  style: const TextStyle(fontSize: 13),
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   widget.onAddBrowseTap();
@@ -197,6 +201,7 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final isHindi = widget.language == AppLanguage.hindi;
     final filtered = _filteredItems;
     final totalCount = widget.items.length;
     final outCount = widget.items.where((i) => i.isOut).length;
@@ -206,71 +211,12 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
 
     final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
     final cardBgColor = isDark ? const Color(0xFF1E293B) : Colors.white;
-    final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+    final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0); // Slate 700 / Slate 200
 
     return Scaffold(
       backgroundColor: bgColor,
       body: CustomScrollView(
         slivers: [
-          SliverAppBar(
-            backgroundColor: bgColor,
-            floating: true,
-            pinned: true,
-            elevation: 0,
-            title: InkWell(
-              onTap: () => _openSwitcherSheet(context),
-              borderRadius: BorderRadius.circular(20),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: borderColor),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(widget.activeList.iconEmoji, style: const TextStyle(fontSize: 20)),
-                    const SizedBox(width: 8),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 160),
-                      child: Text(
-                        widget.activeList.name,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : const Color(0xFF0F172A),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Icon(Icons.arrow_drop_down, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569)),
-                  ],
-                ),
-              ),
-            ),
-            centerTitle: false,
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.copy, color: Color(0xFF38BDF8), size: 22),
-                tooltip: 'Copy Grocery List Text',
-                onPressed: () async {
-                  await ShareService.copyToClipboard(widget.items, listName: widget.activeList.name);
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Grocery list copied to clipboard! 📋')),
-                    );
-                  }
-                },
-              ),
-              IconButton(
-                icon: const Icon(Icons.share, color: Color(0xFF22C55E), size: 22),
-                tooltip: 'Share Grocery List on WhatsApp',
-                onPressed: () => ShareService.shareToWhatsApp(widget.items, listName: widget.activeList.name),
-              ),
-            ],
-          ),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -282,11 +228,11 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: capped
-                          ? const Color(0xFFFEF2F2)
-                          : (isDark ? const Color(0xFF1E293B) : Colors.white),
+                          ? (isDark ? const Color(0xFF450A0A) : const Color(0xFFFEF2F2))
+                          : cardBgColor,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: capped ? const Color(0xFFFCA5A5) : borderColor,
+                        color: capped ? const Color(0xFFEF4444) : borderColor,
                         width: 1.5,
                       ),
                     ),
@@ -344,55 +290,84 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                     child: Row(
                       children: [
                         FilterChip(
+                          side: BorderSide(color: borderColor),
                           label: Text(
-                            '🟢 All (${widget.items.length})',
-                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                            isHindi ? '🟢 सब (${widget.items.length})' : '🟢 All (${widget.items.length})',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: _selectedStatusFilter == 'ALL'
+                                  ? (isDark ? Colors.white : const Color(0xFF0F172A))
+                                  : (isDark ? const Color(0xFFCBD5E1) : const Color(0xFF334155)),
+                            ),
                           ),
                           selected: _selectedStatusFilter == 'ALL',
-                          selectedColor: const Color(0xFFE2E8F0),
+                          selectedColor: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
                           onSelected: (val) {
                             if (val) setState(() => _selectedStatusFilter = 'ALL');
                           },
                         ),
                         const SizedBox(width: 8),
                         FilterChip(
+                          side: BorderSide(color: _selectedStatusFilter == 'OUT' ? const Color(0xFFEF4444) : borderColor),
                           label: Text(
-                            '🔴 Out ($outCount)',
-                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                            isHindi ? '🔴 खत्म ($outCount)' : '🔴 Out ($outCount)',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: _selectedStatusFilter == 'OUT'
+                                  ? Colors.white
+                                  : (isDark ? const Color(0xFFCBD5E1) : const Color(0xFF334155)),
+                            ),
                           ),
                           selected: _selectedStatusFilter == 'OUT',
-                          selectedColor: const Color(0xFFFCA5A5),
+                          selectedColor: const Color(0xFFEF4444),
                           onSelected: (val) {
                             setState(() => _selectedStatusFilter = val ? 'OUT' : 'ALL');
                           },
                         ),
                         const SizedBox(width: 8),
                         FilterChip(
+                          side: BorderSide(color: _selectedStatusFilter == 'LOW' ? const Color(0xFFF59E0B) : borderColor),
                           label: Text(
-                            '🟡 Low ($lowCount)',
-                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                            isHindi ? '🟡 कम ($lowCount)' : '🟡 Low ($lowCount)',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: _selectedStatusFilter == 'LOW'
+                                  ? Colors.white
+                                  : (isDark ? const Color(0xFFCBD5E1) : const Color(0xFF334155)),
+                            ),
                           ),
                           selected: _selectedStatusFilter == 'LOW',
-                          selectedColor: const Color(0xFFFDE68A),
+                          selectedColor: const Color(0xFFF59E0B),
                           onSelected: (val) {
                             setState(() => _selectedStatusFilter = val ? 'LOW' : 'ALL');
                           },
                         ),
-                        const SizedBox(width: 14),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.swap_vert, size: 18, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Drag to reorder',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                        const SizedBox(width: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: borderColor),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.swap_vert, size: 16, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                              const SizedBox(width: 4),
+                              Text(
+                                isHindi ? 'क्रम बदलें' : 'Reorder',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -401,7 +376,7 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
 
                   // Instant 1-Click Quick Add Staples Row
                   Text(
-                    '⚡ 1-Click Quick Add Essentials:',
+                    isHindi ? '⚡ 1-क्लिक तुरंत जोड़ें:' : '⚡ 1-Click Quick Add:',
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
@@ -416,13 +391,21 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                       itemCount: _quickStaplesCache.length,
                       itemBuilder: (context, index) {
                         final item = _quickStaplesCache[index];
+                        final itemName = LocalizationService.getItemName(item.nameEn, item.nameHi, widget.language);
+
                         return Padding(
                           padding: const EdgeInsets.only(right: 8.0),
                           child: ActionChip(
+                            side: BorderSide(color: borderColor),
+                            backgroundColor: cardBgColor,
                             avatar: Text(item.iconEmoji, style: const TextStyle(fontSize: 18)),
                             label: Text(
-                              '+ ${item.nameEn.split('(')[0].trim()}',
-                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                              '+ $itemName',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              ),
                             ),
                             onPressed: () => _instantAddStaple(context, item),
                           ),
@@ -435,7 +418,7 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
             ),
           ),
 
-          // Reorderable Drag-and-Drop List with Large Fonts
+          // Reorderable Drag-and-Drop List with Single Clean Language Item Names
           if (filtered.isEmpty)
             SliverFillRemaining(
               hasScrollBody: false,
@@ -446,12 +429,12 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                     const Icon(Icons.filter_alt_off, size: 52, color: Colors.grey),
                     const SizedBox(height: 12),
                     Text(
-                      'No items match filter "$_selectedStatusFilter"',
+                      isHindi ? 'कोई सामान नहीं मिला' : 'No items match filter',
                       style: const TextStyle(fontSize: 15, color: Colors.grey),
                     ),
                     TextButton(
                       onPressed: () => setState(() => _selectedStatusFilter = 'ALL'),
-                      child: const Text('Show All Items', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                      child: Text(isHindi ? 'सब देखें' : 'Show All Items', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
@@ -464,6 +447,7 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
               itemBuilder: (context, index) {
                 final item = filtered[index];
                 final itemKey = ValueKey(item.id ?? item.catalogId);
+                final displayName = LocalizationService.getItemName(item.customName, item.nameHi, widget.language);
 
                 return ReorderableDelayedDragStartListener(
                   key: itemKey,
@@ -479,7 +463,7 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                             ? const Color(0xFFEF4444)
                             : item.isLow
                                 ? const Color(0xFFF59E0B)
-                                : borderColor,
+                                : borderColor, // Slate 700 in Dark Mode
                         width: (item.isOut || item.isLow) ? 1.5 : 1.0,
                       ),
                       boxShadow: [
@@ -507,28 +491,14 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                             ),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    item.customName,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18, // Large Font Title
-                                      color: isDark ? Colors.white : const Color(0xFF0F172A),
-                                      decoration: item.isOut ? TextDecoration.lineThrough : null,
-                                    ),
-                                  ),
-                                  if (item.nameHi.isNotEmpty)
-                                    Text(
-                                      item.nameHi,
-                                      style: TextStyle(
-                                        fontSize: 14, // Large Font Hindi Subtitle
-                                        fontWeight: FontWeight.w600,
-                                        color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7),
-                                      ),
-                                    ),
-                                ],
+                              child: Text(
+                                displayName,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                  decoration: item.isOut ? TextDecoration.lineThrough : null,
+                                ),
                               ),
                             ),
                             // Large In-Line Quantity Stepper (- 1 kg +)
@@ -561,7 +531,7 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                                   Text(
                                     '${item.quantity % 1 == 0 ? item.quantity.toInt() : item.quantity} ${item.unit}',
                                     style: const TextStyle(
-                                      fontSize: 14, // Large Stepper Font
+                                      fontSize: 14,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -603,7 +573,7 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                         Row(
                           children: [
                             Text(
-                              'Status:',
+                              isHindi ? 'स्थिति:' : 'Status:',
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
@@ -616,10 +586,10 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                 children: [
                                   _buildStatusButton(
-                                    label: 'In Stock',
-                                    labelHi: 'है',
+                                    label: isHindi ? 'स्टॉक में है' : 'In Stock',
                                     isSelected: !item.isLow && !item.isOut,
                                     activeColor: const Color(0xFF22C55E),
+                                    borderColor: borderColor,
                                     onTap: () async {
                                       if (item.id != null) {
                                         await DatabaseHelper.instance.toggleStockStatus(
@@ -632,10 +602,10 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                                     },
                                   ),
                                   _buildStatusButton(
-                                    label: 'Low',
-                                    labelHi: 'कम',
+                                    label: isHindi ? 'कम है' : 'Low',
                                     isSelected: item.isLow,
                                     activeColor: const Color(0xFFF59E0B),
+                                    borderColor: borderColor,
                                     onTap: () async {
                                       if (item.id != null) {
                                         await DatabaseHelper.instance.toggleStockStatus(
@@ -648,10 +618,10 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                                     },
                                   ),
                                   _buildStatusButton(
-                                    label: 'Out',
-                                    labelHi: 'खत्म',
+                                    label: isHindi ? 'खत्म है' : 'Out',
                                     isSelected: item.isOut,
                                     activeColor: const Color(0xFFEF4444),
+                                    borderColor: borderColor,
                                     onTap: () async {
                                       if (item.id != null) {
                                         await DatabaseHelper.instance.toggleStockStatus(
@@ -706,11 +676,15 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                     ),
                   ),
                   icon: const Icon(Icons.share, size: 22),
-                  label: const Text(
-                    'Send List on WhatsApp / व्हाट्सएप भेजें',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  label: Text(
+                    isHindi ? 'व्हाट्सएप पर सूची भेजें' : 'Send List on WhatsApp',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                   ),
-                  onPressed: () => ShareService.shareToWhatsApp(widget.items, listName: widget.activeList.name),
+                  onPressed: () => ShareService.shareToWhatsApp(
+                    widget.items,
+                    listName: widget.activeList.name,
+                    language: widget.language,
+                  ),
                 ),
               ),
             ),
@@ -727,8 +701,8 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                 }
                 _showAddModal(context);
               },
-              backgroundColor: const Color(0xFF0F172A),
-              foregroundColor: Colors.white,
+              backgroundColor: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0F172A),
+              foregroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
               child: const Icon(Icons.add, size: 26),
             ),
           ],
@@ -739,9 +713,9 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
 
   Widget _buildStatusButton({
     required String label,
-    required String labelHi,
     required bool isSelected,
     required Color activeColor,
+    required Color borderColor,
     required VoidCallback onTap,
   }) {
     return InkWell(
@@ -753,16 +727,16 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
           color: isSelected ? activeColor : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: isSelected ? activeColor : const Color(0xFFCBD5E1),
+            color: isSelected ? activeColor : borderColor,
             width: 1.2,
           ),
         ),
         child: Text(
-          '$label ($labelHi)',
+          label,
           style: TextStyle(
-            fontSize: 13, // Large Status Button Font
+            fontSize: 13,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-            color: isSelected ? Colors.white : const Color(0xFF64748B),
+            color: isSelected ? Colors.white : const Color(0xFF94A3B8),
           ),
         ),
       ),

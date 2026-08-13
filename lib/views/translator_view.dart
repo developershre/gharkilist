@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+import '../data/indian_pantry_catalog.dart';
+import '../models/catalog_item.dart';
 import '../models/inventory_item.dart';
-import '../services/translation_service.dart';
-import 'item_detail_sheet.dart';
 
 class TranslatorView extends StatefulWidget {
   final Function(InventoryItem item) onItemAdded;
@@ -18,30 +18,21 @@ class TranslatorView extends StatefulWidget {
 
 class _TranslatorViewState extends State<TranslatorView> {
   final TextEditingController _inputController = TextEditingController();
-  bool _isEngToHindi = true;
-  TranslationResult? _result;
+  List<CatalogItem> _searchResults = [];
 
-  final List<String> _quickEngSuggestions = [
-    'Wheat Flour',
-    'Toor Dal',
-    'Turmeric',
-    'Desi Ghee',
-    'Mustard Oil',
-    'Chai Patti',
-    'Sabudana',
-    'Dishwash Bar',
-  ];
+  void _translateInput(String input) {
+    if (input.trim().isEmpty) {
+      setState(() => _searchResults = []);
+      return;
+    }
 
-  final List<String> _quickHindiSuggestions = [
-    'गेहूं का आटा',
-    'तूर दाल',
-    'हल्दी',
-    'देसी घी',
-    'सरसों का तेल',
-    'चाय पत्ती',
-    'साबूदाना',
-    'बर्तन साबुन',
-  ];
+    final query = input.trim().toLowerCase();
+    final results = seedIndianCatalog.where((item) => item.matchesSearch(query)).toList();
+
+    setState(() {
+      _searchResults = results;
+    });
+  }
 
   @override
   void dispose() {
@@ -49,223 +40,132 @@ class _TranslatorViewState extends State<TranslatorView> {
     super.dispose();
   }
 
-  void _performTranslation(String query) {
-    if (query.trim().isEmpty) {
-      setState(() => _result = null);
-      return;
-    }
-    final res = TranslationService.translate(query, isEngToHindi: _isEngToHindi);
-    setState(() {
-      _result = res;
-    });
-  }
-
-  void _toggleDirection() {
-    setState(() {
-      _isEngToHindi = !_isEngToHindi;
-      _inputController.clear();
-      _result = null;
-    });
-  }
-
-  void _openItemSheet() {
-    if (_result?.matchedCatalogItem != null) {
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (context) => ItemDetailSheet(
-          catalogItem: _result!.matchedCatalogItem!,
-          onSave: (invItem) {
-            widget.onItemAdded(invItem);
-            Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Added "${invItem.customName}" to Pantry!')),
-            );
-          },
-        ),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final suggestions = _isEngToHindi ? _quickEngSuggestions : _quickHindiSuggestions;
+
+    final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+    final cardBgColor = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1);
 
     return Scaffold(
+      backgroundColor: bgColor,
       appBar: AppBar(
-        title: const Text('Bilingual Grocery Translator'),
+        backgroundColor: bgColor,
+        elevation: 0,
+        title: const Text('Translator (हिंदी / English)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Language Direction Switcher Card
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF27272A) : Colors.grey.shade100,
+                color: const Color(0xFF38BDF8).withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: isDark ? const Color(0xFF3F3F46) : Colors.grey.shade300,
-                ),
+                border: Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.3)),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: const Row(
                 children: [
-                  Text(
-                    _isEngToHindi ? 'English ➔ Hindi (हिंदी)' : 'Hindi (हिंदी) ➔ English',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                  Icon(Icons.g_translate, color: Color(0xFF0284C7), size: 28),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Type any English or Hindi name (e.g. "Atta", "गेहूं", "Toor Dal", "हल्दी") to translate instantly!',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.swap_horiz, color: Colors.orangeAccent),
-                    onPressed: _toggleDirection,
-                    tooltip: 'Switch Language Direction',
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
-            // Input Field
+            const SizedBox(height: 16),
             ShadInput(
               controller: _inputController,
-              placeholder: Text(
-                _isEngToHindi
-                    ? 'Type in English e.g. "Toor Dal", "Turmeric"...'
-                    : 'Type in Hindi e.g. "तूर दाल", "हल्दी"...',
-              ),
-              leading: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8.0),
-                child: Icon(Icons.translate, size: 20, color: Colors.orangeAccent),
-              ),
-              trailing: _inputController.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear, size: 18),
-                      onPressed: () {
-                        _inputController.clear();
-                        _performTranslation('');
-                      },
-                    )
-                  : null,
-              onChanged: _performTranslation,
+              placeholder: const Text('Type item name in English or हिंदी...'),
+              leading: const Icon(Icons.search, size: 20),
+              onChanged: _translateInput,
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Quick Try Suggestions:',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: suggestions.map((s) {
-                return ActionChip(
-                  label: Text(s, style: const TextStyle(fontSize: 12)),
-                  onPressed: () {
-                    _inputController.text = s;
-                    _performTranslation(s);
-                  },
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 24),
-            // Translation Result Card
-            if (_result != null && _result!.sourceText.isNotEmpty) ...[
-              const Text(
-                'Translation Result',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF18181B) : Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: isDark ? Colors.amber.withValues(alpha: 0.5) : Colors.amber,
-                    width: 1.5,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          _result!.matchedCatalogItem?.iconEmoji ?? '🔤',
-                          style: const TextStyle(fontSize: 32),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _result!.translatedText,
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.amber,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'From: ${_result!.sourceText} (${_result!.sourceLanguage})',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
-                                ),
-                              ),
-                            ],
+            Expanded(
+              child: _searchResults.isEmpty
+                  ? Center(
+                      child: Text(
+                        _inputController.text.isEmpty
+                            ? 'Start typing above to translate item names.'
+                            : 'No translation found for "${_inputController.text}".',
+                        style: const TextStyle(fontSize: 15, color: Colors.grey),
+                      ),
+                    )
+                  : ListView.separated(
+                      itemCount: _searchResults.length,
+                      separatorBuilder: (context, index) => const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final item = _searchResults[index];
+                        return Card(
+                          elevation: 0,
+                          color: cardBgColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(color: borderColor),
                           ),
-                        ),
-                      ],
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            leading: Text(item.iconEmoji, style: const TextStyle(fontSize: 32)),
+                            title: Row(
+                              children: [
+                                Text(
+                                  item.nameEn,
+                                  style: TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                const Icon(Icons.compare_arrows, size: 18, color: Colors.grey),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    item.nameHi,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            subtitle: Text('Category: ${item.category}', style: const TextStyle(fontSize: 13, color: Colors.grey)),
+                            trailing: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0F172A),
+                                foregroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+                              ),
+                              onPressed: () {
+                                final inv = InventoryItem(
+                                  inventoryId: 1,
+                                  catalogId: item.id,
+                                  customName: item.nameEn,
+                                  nameHi: item.nameHi,
+                                  category: item.category,
+                                  quantity: 1.0,
+                                  unit: item.defaultUnit,
+                                  catalogItem: item,
+                                );
+                                widget.onItemAdded(inv);
+                                Navigator.pop(context);
+                              },
+                              child: const Text('Add Item', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                    if (_result!.category != null) ...[
-                      const SizedBox(height: 12),
-                      ShadBadge(
-                        child: Text('Category: ${_result!.category}'),
-                      ),
-                    ],
-                    if (_result!.aliases.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        'Regional Aliases: ${_result!.aliases.join(", ")}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade700,
-                        ),
-                      ),
-                    ],
-                    if (_result!.matchedCatalogItem != null) ...[
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 44,
-                        child: ShadButton(
-                          onPressed: _openItemSheet,
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.add_shopping_cart, size: 18),
-                              SizedBox(width: 8),
-                              Text('Add Item to Pantry Inventory'),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
+            ),
           ],
         ),
       ),

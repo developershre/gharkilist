@@ -1,17 +1,21 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import '../models/catalog_item.dart';
 import '../models/inventory_item.dart';
 import '../services/database_helper.dart';
+import '../services/localization_service.dart';
 import 'item_detail_sheet.dart';
 
 class CatalogBrowseView extends StatefulWidget {
   final String? capturedPhotoPath;
+  final AppLanguage language;
   final Function(InventoryItem item) onItemAdded;
 
   const CatalogBrowseView({
     super.key,
     this.capturedPhotoPath,
+    this.language = AppLanguage.english,
     required this.onItemAdded,
   });
 
@@ -25,6 +29,7 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
   List<String> _categories = ['All'];
   String _selectedCategory = 'All';
   bool _isLoading = true;
+  Timer? _debounceTimer;
 
   final List<String> _voiceSuggestions = [
     'Atta',
@@ -45,6 +50,7 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -53,28 +59,36 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
     setState(() => _isLoading = true);
     final items = await DatabaseHelper.instance.getAllCatalogItems();
     final categories = await DatabaseHelper.instance.getCatalogCategories();
-    setState(() {
-      _catalogItems = items;
-      _categories = ['All', ...categories];
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _catalogItems = items;
+        _categories = ['All', ...categories];
+        _isLoading = false;
+      });
+    }
   }
 
-  Future<void> _onSearchChanged(String query) async {
-    final results = await DatabaseHelper.instance.searchCatalog(
-      query,
-      category: _selectedCategory,
-    );
-    setState(() {
-      _catalogItems = results;
+  void _onSearchChanged(String query) {
+    if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 150), () async {
+      final results = await DatabaseHelper.instance.searchCatalog(
+        query,
+        category: _selectedCategory,
+      );
+      if (mounted) {
+        setState(() {
+          _catalogItems = results;
+        });
+      }
     });
   }
 
   void _showVoiceSearchModal() {
+    final isHindi = widget.language == AppLanguage.hindi;
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
         return Padding(
@@ -91,15 +105,15 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
                 child: const Icon(Icons.mic, color: Color(0xFF0284C7), size: 38),
               ),
               const SizedBox(height: 16),
-              const Text(
-                'बोल कर सामान ढूंढें (Voice Search)',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              Text(
+                isHindi ? 'बोल कर सामान ढूंढें' : 'Voice Search Catalog',
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 6),
-              const Text(
-                'Tap a voice sample or speak item name (e.g. Atta, Dal, Agarbatti):',
+              Text(
+                isHindi ? 'किसी भी नाम पर टैप करें या बोलें:' : 'Tap a sample chip or speak item name:',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: Colors.grey),
+                style: const TextStyle(fontSize: 13, color: Colors.grey),
               ),
               const SizedBox(height: 16),
               Wrap(
@@ -132,9 +146,10 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
       builder: (context) => ItemDetailSheet(
         catalogItem: item,
         capturedPhotoPath: widget.capturedPhotoPath,
+        language: widget.language,
         onSave: (inventoryItem) {
           widget.onItemAdded(inventoryItem);
-          Navigator.pop(context); // Close browse view
+          Navigator.pop(context);
         },
       ),
     );
@@ -144,16 +159,21 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final isHindi = widget.language == AppLanguage.hindi;
+
     final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
     final cardBgColor = isDark ? const Color(0xFF1E293B) : Colors.white;
-    final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+    final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1);
 
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
         backgroundColor: bgColor,
         elevation: 0,
-        title: const Text('Catalog (सामान सूची)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        title: Text(
+          isHindi ? 'सामान सूची' : 'Catalog Browse',
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
       ),
       body: Column(
         children: [
@@ -161,14 +181,14 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
             Container(
               color: const Color(0xFF0EA5E9).withValues(alpha: 0.15),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.camera_alt, color: Color(0xFF0284C7), size: 22),
-                  SizedBox(width: 8),
+                  const Icon(Icons.camera_alt, color: Color(0xFF0284C7), size: 22),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Photo captured! Select matching item below to save photo.',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                      isHindi ? 'फोटो ली गई! फोटो जोड़ने के लिए सामान चुनें।' : 'Photo captured! Select item below to attach photo.',
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
@@ -182,7 +202,7 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
                 Expanded(
                   child: ShadInput(
                     controller: _searchController,
-                    placeholder: const Text('Search Atta, Dal, Salt, Pooja... (खोजें)'),
+                    placeholder: Text(isHindi ? 'आटा, दाल, नमक, पूजा सामान खोजें...' : 'Search Atta, Dal, Salt, Pooja...'),
                     leading: const Icon(Icons.search, size: 20),
                     onChanged: _onSearchChanged,
                   ),
@@ -190,13 +210,13 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
                 const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.mic, color: Color(0xFF0284C7), size: 26),
-                  tooltip: 'बोल कर ढूंढें (Voice Search)',
+                  tooltip: isHindi ? 'बोल कर ढूंढें' : 'Voice Search',
                   onPressed: _showVoiceSearchModal,
                 ),
               ],
             ),
           ),
-          // Category Filter Horizontal Pills
+          // Category Filter Horizontal Pills with Slate 700 / 200 Borders & High Contrast Selected States
           SizedBox(
             height: 42,
             child: ListView.builder(
@@ -209,16 +229,23 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
                 return Padding(
                   padding: const EdgeInsets.only(right: 8.0),
                   child: ChoiceChip(
+                    side: BorderSide(
+                      color: isSelected
+                          ? (isDark ? const Color(0xFF38BDF8) : const Color(0xFF0F172A))
+                          : borderColor,
+                    ),
                     label: Text(
                       cat,
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                        color: isSelected ? Colors.white : (isDark ? Colors.white : const Color(0xFF0F172A)),
+                        color: isSelected
+                            ? (isDark ? const Color(0xFF0F172A) : Colors.white)
+                            : (isDark ? const Color(0xFFCBD5E1) : const Color(0xFF334155)),
                       ),
                     ),
                     selected: isSelected,
-                    selectedColor: const Color(0xFF0F172A),
+                    selectedColor: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0F172A),
                     onSelected: (selected) {
                       if (selected) {
                         setState(() {
@@ -234,23 +261,26 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
           ),
           const SizedBox(height: 8),
 
-          // Catalog Grid / List with Large Fonts
+          // Catalog List with High Contrast Sky Blue Trailing Icons in Dark Mode
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _catalogItems.isEmpty
-                    ? const Center(child: Text('No items found matching search.', style: TextStyle(fontSize: 15)))
+                    ? Center(child: Text(isHindi ? 'कोई सामान नहीं मिला' : 'No items found matching search.', style: const TextStyle(fontSize: 15)))
                     : ListView.separated(
                         padding: const EdgeInsets.all(14),
                         itemCount: _catalogItems.length,
                         separatorBuilder: (context, index) => const SizedBox(height: 8),
                         itemBuilder: (context, index) {
                           final item = _catalogItems[index];
+                          final itemName = LocalizationService.getItemName(item.nameEn, item.nameHi, widget.language);
+                          final catName = LocalizationService.getCategoryName(item.category, item.categoryHi, widget.language);
+
                           return Card(
                             elevation: 0,
                             color: cardBgColor,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(16),
                               side: BorderSide(color: borderColor),
                             ),
                             child: ListTile(
@@ -260,24 +290,26 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
                                 style: const TextStyle(fontSize: 32),
                               ),
                               title: Text(
-                                item.nameEn,
+                                itemName,
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 18, // Large Item Title
+                                  fontSize: 18,
                                   color: isDark ? Colors.white : const Color(0xFF0F172A),
                                 ),
                               ),
                               subtitle: Text(
-                                item.nameHi.isNotEmpty
-                                    ? '${item.nameHi} • ${item.category}'
-                                    : item.category,
-                                style: const TextStyle(
-                                  color: Color(0xFF0284C7),
-                                  fontSize: 14, // Large Subtitle
+                                catName,
+                                style: TextStyle(
+                                  color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7),
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
-                              trailing: const Icon(Icons.add_circle_outline, color: Color(0xFF0F172A), size: 26),
+                              trailing: Icon(
+                                Icons.add_circle_outline,
+                                color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0F172A),
+                                size: 26,
+                              ),
                               onTap: () => _openItemDetail(item),
                             ),
                           );

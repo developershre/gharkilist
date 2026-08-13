@@ -2,14 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import '../models/inventory_list.dart';
 import '../services/database_helper.dart';
+import '../services/localization_service.dart';
 
 class InventorySwitcherSheet extends StatefulWidget {
   final InventoryList activeList;
+  final AppLanguage language;
   final Function(InventoryList newList) onListSelected;
 
   const InventorySwitcherSheet({
     super.key,
     required this.activeList,
+    this.language = AppLanguage.english,
     required this.onListSelected,
   });
 
@@ -31,15 +34,19 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
 
   Future<void> _loadLists() async {
     final lists = await DatabaseHelper.instance.getAllInventories();
-    setState(() {
-      _lists = lists;
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _lists = lists;
+        _isLoading = false;
+      });
+    }
   }
 
   void _showCreateDialog() {
     final nameController = TextEditingController();
     String selectedEmoji = '📦';
+    final isHindi = widget.language == AppLanguage.hindi;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     showDialog(
       context: context,
@@ -47,23 +54,25 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: const Text('Create Custom Inventory List', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              title: Text(isHindi ? 'नई सूची बनाएं' : 'Create Custom Inventory List', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Enter List Name (e.g. Navratri, Party, Medicine):',
-                      style: TextStyle(fontSize: 13, color: Colors.grey)),
+                  Text(
+                    isHindi ? 'सूची का नाम लिखें (जैसे त्यौहार, पूजा, दवायां):' : 'Enter List Name (e.g. Navratri, Party, Medicine):',
+                    style: const TextStyle(fontSize: 13, color: Colors.grey),
+                  ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: nameController,
-                    decoration: const InputDecoration(
-                      hintText: 'List name...',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      hintText: isHindi ? 'सूची का नाम...' : 'List name...',
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text('Select Icon:', style: TextStyle(fontSize: 13, color: Colors.grey)),
+                  Text(isHindi ? 'आइकन चुनें:' : 'Select Icon:', style: const TextStyle(fontSize: 13, color: Colors.grey)),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -83,10 +92,13 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel', style: TextStyle(fontSize: 15)),
+                  child: Text(isHindi ? 'रद्द करें' : 'Cancel', style: const TextStyle(fontSize: 15)),
                 ),
                 ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F172A), foregroundColor: Colors.white),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0F172A),
+                    foregroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+                  ),
                   onPressed: () async {
                     final name = nameController.text.trim();
                     if (name.isNotEmpty) {
@@ -100,7 +112,7 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
                       }
                     }
                   },
-                  child: const Text('Create List', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                  child: Text(isHindi ? 'बनाएं' : 'Create List', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                 ),
               ],
             );
@@ -114,6 +126,8 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final isHindi = widget.language == AppLanguage.hindi;
+
     final cardBgColor = isDark ? const Color(0xFF1E293B) : Colors.white;
     final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1);
 
@@ -147,7 +161,7 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Select Inventory List / सूची चुनें',
+                isHindi ? 'सूची बदलें (Select Inventory List)' : 'Select Inventory List',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -155,7 +169,7 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.add_circle_outline, color: Color(0xFF0F172A), size: 26),
+                icon: Icon(Icons.add_circle_outline, color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0F172A), size: 26),
                 onPressed: _showCreateDialog,
                 tooltip: 'Create New Inventory List',
               ),
@@ -180,9 +194,11 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
                         ? (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0))
                         : cardBgColor,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(16),
                       side: BorderSide(
-                        color: isSelected ? const Color(0xFF0F172A) : borderColor,
+                        color: isSelected
+                            ? (isDark ? const Color(0xFF38BDF8) : const Color(0xFF0F172A))
+                            : borderColor,
                         width: isSelected ? 2.0 : 1.0,
                       ),
                     ),
@@ -192,19 +208,19 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
                       title: Text(
                         list.name,
                         style: TextStyle(
-                          fontSize: 17, // Large Font List Title
+                          fontSize: 17,
                           fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
                           color: isDark ? Colors.white : const Color(0xFF0F172A),
                         ),
                       ),
                       subtitle: list.isDefault
-                          ? const Text('Primary Household Pantry', style: TextStyle(fontSize: 13, color: Colors.grey))
+                          ? Text(isHindi ? 'मुख्य घरेलू सूची' : 'Primary Household Pantry', style: const TextStyle(fontSize: 13, color: Colors.grey))
                           : null,
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (isSelected)
-                            const Icon(Icons.check_circle, color: Color(0xFF0F172A), size: 24),
+                            Icon(Icons.check_circle, color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0F172A), size: 24),
                           if (!list.isDefault && list.id != null)
                             IconButton(
                               icon: const Icon(Icons.delete_outline, color: Color(0xFFEF4444), size: 22),
@@ -230,14 +246,14 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
             height: 48,
             child: ShadButton.outline(
               onPressed: _showCreateDialog,
-              child: const Row(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.add, size: 20),
-                  SizedBox(width: 8),
+                  const Icon(Icons.add, size: 20),
+                  const SizedBox(width: 8),
                   Text(
-                    '➕ Create New Inventory List (Pooja, Festival...)',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    isHindi ? '➕ नई सूची बनाएं (Pooja, Festival...)' : '➕ Create New Inventory List (Pooja, Festival...)',
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),

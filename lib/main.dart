@@ -4,11 +4,13 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'models/inventory_item.dart';
 import 'models/inventory_list.dart';
 import 'services/database_helper.dart';
+import 'services/localization_service.dart';
 import 'views/catalog_browse_view.dart';
 import 'views/empty_state_view.dart';
 import 'views/inventory_home_view.dart';
 import 'views/inventory_switcher_sheet.dart';
 import 'views/scan_capture_view.dart';
+import 'views/settings_view.dart';
 import 'views/translator_view.dart';
 
 void main() {
@@ -27,16 +29,23 @@ class BhandarKhataApp extends StatefulWidget {
 }
 
 class BhandarKhataAppState extends State<BhandarKhataApp> {
-  ThemeMode _themeMode = ThemeMode.light;
+  ThemeMode _themeMode = ThemeMode.system; // Default: System Theme
+  AppLanguage _language = AppLanguage.english; // Default: English
 
-  void toggleTheme() {
+  void setThemeMode(ThemeMode mode) {
     setState(() {
-      _themeMode =
-          _themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
+      _themeMode = mode;
+    });
+  }
+
+  void setLanguage(AppLanguage language) {
+    setState(() {
+      _language = language;
     });
   }
 
   ThemeMode get themeMode => _themeMode;
+  AppLanguage get language => _language;
 
   @override
   Widget build(BuildContext context) {
@@ -84,7 +93,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     final lists = await DatabaseHelper.instance.getAllInventories();
     final defaultList = lists.isNotEmpty
         ? lists.firstWhere((l) => l.isDefault, orElse: () => lists.first)
-        : InventoryList(id: 1, name: 'रसोई का सामान (Kitchen)', iconEmoji: '🏠', isDefault: true);
+        : InventoryList(id: 1, name: 'Kitchen Pantry', iconEmoji: '🏠', isDefault: true);
 
     final items = await DatabaseHelper.instance.getInventoryItemsForList(defaultList.id ?? 1);
 
@@ -130,10 +139,12 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
   }
 
   void _openBrowseView() {
+    final appState = BhandarKhataApp.of(context);
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => CatalogBrowseView(
+          language: appState.language,
           onItemAdded: (item) async {
             final itemWithList = item.copyWith(inventoryId: _activeList?.id ?? 1);
             await DatabaseHelper.instance.addInventoryItem(itemWithList);
@@ -159,14 +170,35 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     );
   }
 
+  void _openSettingsView() {
+    if (_activeList == null) return;
+    final appState = BhandarKhataApp.of(context);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SettingsView(
+          activeList: _activeList!,
+          themeMode: appState.themeMode,
+          language: appState.language,
+          onSetThemeMode: appState.setThemeMode,
+          onSetLanguage: appState.setLanguage,
+          onOpenTranslator: _openTranslatorView,
+          onListCleared: _refreshInventory,
+        ),
+      ),
+    );
+  }
+
   void _openSwitcherSheet() {
     if (_activeList == null) return;
+    final appState = BhandarKhataApp.of(context);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => InventorySwitcherSheet(
         activeList: _activeList!,
+        language: appState.language,
         onListSelected: _switchActiveList,
       ),
     );
@@ -175,7 +207,9 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final appState = BhandarKhataApp.of(context);
-    final isDark = appState.themeMode == ThemeMode.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final language = appState.language;
 
     if (_isInitialLoading || _activeList == null) {
       return const Scaffold(
@@ -183,7 +217,14 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
       );
     }
 
+    final displayListName = LocalizationService.getItemName(
+      _activeList!.name,
+      _activeList!.name,
+      language,
+    );
+
     return Scaffold(
+      // SINGLE CLEAN HEADER AT TOP
       appBar: AppBar(
         backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
         elevation: 0,
@@ -205,9 +246,9 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                 Text(_activeList!.iconEmoji, style: const TextStyle(fontSize: 22)),
                 const SizedBox(width: 8),
                 ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 160),
+                  constraints: const BoxConstraints(maxWidth: 180),
                   child: Text(
-                    _activeList!.name,
+                    displayListName,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 16,
@@ -226,25 +267,19 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
           ),
         ),
         actions: [
+          // ONLY SETTINGS ICON IN HEADER
           IconButton(
-            icon: const Icon(Icons.g_translate, color: Color(0xFF38BDF8), size: 24),
-            tooltip: 'हिंदी / English अनुवाद् (Translator)',
-            onPressed: _openTranslatorView,
+            icon: const Icon(Icons.settings, color: Color(0xFF64748B), size: 26),
+            tooltip: language == AppLanguage.english ? 'Settings' : 'सेटिंग्स',
+            onPressed: _openSettingsView,
           ),
-          IconButton(
-            icon: Icon(
-              isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-              color: isDark ? const Color(0xFFFACC15) : const Color(0xFF334155),
-              size: 24,
-            ),
-            tooltip: isDark ? 'Light Mode' : 'Dark Mode',
-            onPressed: appState.toggleTheme,
-          ),
+          const SizedBox(width: 6),
         ],
       ),
       body: _inventoryItems.isEmpty
           ? EmptyStateView(
               activeList: _activeList!,
+              language: language,
               onScanTap: _openScanView,
               onBrowseTap: _openBrowseView,
               onQuickAddCatalogItem: (item) async {
@@ -265,6 +300,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
           : InventoryHomeView(
               activeList: _activeList!,
               items: _inventoryItems,
+              language: language,
               onRefresh: _refreshInventory,
               onListChanged: _switchActiveList,
               onAddScanTap: _openScanView,

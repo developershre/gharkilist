@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import '../data/indian_pantry_catalog.dart';
 import '../models/catalog_item.dart';
 import '../models/inventory_list.dart';
+import '../services/localization_service.dart';
 
 class EmptyStateView extends StatelessWidget {
   final InventoryList activeList;
+  final AppLanguage language;
   final VoidCallback onScanTap;
   final VoidCallback onBrowseTap;
   final Function(CatalogItem item) onQuickAddCatalogItem;
@@ -12,6 +14,7 @@ class EmptyStateView extends StatelessWidget {
   const EmptyStateView({
     super.key,
     required this.activeList,
+    required this.language,
     required this.onScanTap,
     required this.onBrowseTap,
     required this.onQuickAddCatalogItem,
@@ -20,6 +23,7 @@ class EmptyStateView extends StatelessWidget {
   void _showAddOptionsModal(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final isHindi = language == AppLanguage.hindi;
 
     showModalBottomSheet(
       context: context,
@@ -43,7 +47,7 @@ class EmptyStateView extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                'Add Item to "${activeList.name}"',
+                isHindi ? 'सामान जोड़ें: "${activeList.name}"' : 'Add Item to "${activeList.name}"',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -52,7 +56,7 @@ class EmptyStateView extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Choose how you want to add items to your ${activeList.name}',
+                isHindi ? 'अपनी सूची में नया सामान जोड़ने का तरीका चुनें' : 'Choose how to add items to your list',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
@@ -69,13 +73,13 @@ class EmptyStateView extends StatelessWidget {
                   ),
                   child: const Icon(Icons.camera_alt_outlined, color: Color(0xFF0EA5E9)),
                 ),
-                title: const Text(
-                  'Scan Photo (Pre-AI)',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                title: Text(
+                  isHindi ? 'फोटो खींचें (Camera Scan)' : 'Camera Scan',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
-                subtitle: const Text(
-                  'Take a picture of the item package or bag',
-                  style: TextStyle(fontSize: 13),
+                subtitle: Text(
+                  isHindi ? 'पैकेट या बोरी की फोटो लें' : 'Take a picture of item package',
+                  style: const TextStyle(fontSize: 13),
                 ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
@@ -93,13 +97,13 @@ class EmptyStateView extends StatelessWidget {
                   ),
                   child: const Icon(Icons.search_outlined, color: Color(0xFF6366F1)),
                 ),
-                title: const Text(
-                  'Browse / Search Catalog',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                title: Text(
+                  isHindi ? 'सामान सूची देखें (Browse Catalog)' : 'Browse Catalog',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
-                subtitle: const Text(
-                  'Search 200+ Indian household staples (Atta, Dal, Pooja essentials...)',
-                  style: TextStyle(fontSize: 13),
+                subtitle: Text(
+                  isHindi ? 'आटा, दाल, मसाले, पूजा सामान खोजें' : 'Search 200+ Indian household staples',
+                  style: const TextStyle(fontSize: 13),
                 ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
@@ -119,6 +123,7 @@ class EmptyStateView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final isHindi = language == AppLanguage.hindi;
 
     final quickStaples = seedIndianCatalog.where((i) => [
           'grains_atta',
@@ -162,9 +167,9 @@ class EmptyStateView extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 2),
-                    const Text(
-                      'This inventory list is currently empty. Tap "+" below to add items.',
-                      style: TextStyle(fontSize: 13, color: Colors.grey),
+                    Text(
+                      isHindi ? 'यह सूची अभी खाली है। सामान जोड़ने के लिए "+" दबाएं।' : 'This list is empty. Tap "+" to add items.',
+                      style: const TextStyle(fontSize: 13, color: Colors.grey),
                     ),
                   ],
                 ),
@@ -196,15 +201,19 @@ class EmptyStateView extends StatelessWidget {
               children: [
                 Container(
                   padding: const EdgeInsets.all(16),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF0F172A),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0F172A),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.add, color: Colors.white, size: 36),
+                  child: Icon(
+                    Icons.add,
+                    color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                    size: 36,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Add First Item to ${activeList.name}',
+                  isHindi ? 'पहला सामान जोड़ें' : 'Add First Item to ${activeList.name}',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -212,10 +221,10 @@ class EmptyStateView extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 6),
-                const Text(
-                  'Tap here to Scan Photo or Browse 200+ Catalog Items',
+                Text(
+                  isHindi ? 'फोटो खींचने या 200+ सामान देखने के लिए यहां दबाएं' : 'Tap here to Scan Photo or Browse Catalog',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: Colors.grey),
+                  style: const TextStyle(fontSize: 14, color: Colors.grey),
                 ),
               ],
             ),
@@ -225,7 +234,7 @@ class EmptyStateView extends StatelessWidget {
 
         // 1-Click Instant Add Section with Large Font Cards
         Text(
-          '⚡ 1-Click Instant Add Essentials:',
+          isHindi ? '⚡ 1-क्लिक तुरंत जोड़ें:' : '⚡ 1-Click Quick Add Essentials:',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -245,13 +254,15 @@ class EmptyStateView extends StatelessWidget {
           itemCount: quickStaples.length,
           itemBuilder: (context, index) {
             final item = quickStaples[index];
+            final itemName = LocalizationService.getItemName(item.nameEn, item.nameHi, language);
+
             return InkWell(
               onTap: () {
                 onQuickAddCatalogItem(item);
                 ScaffoldMessenger.of(context).clearSnackBars();
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Added "${item.nameEn}" to ${activeList.name}!'),
+                    content: Text('Added "$itemName" to ${activeList.name}!'),
                     duration: const Duration(seconds: 2),
                   ),
                 );
@@ -272,34 +283,22 @@ class EmptyStateView extends StatelessWidget {
                     Text(item.iconEmoji, style: const TextStyle(fontSize: 28)),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item.nameEn.split('(')[0].trim(),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              color: isDark ? Colors.white : const Color(0xFF0F172A),
-                            ),
-                          ),
-                          Text(
-                            item.nameHi.split('(')[0].trim(),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF0284C7),
-                            ),
-                          ),
-                        ],
+                      child: Text(
+                        itemName,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                        ),
                       ),
                     ),
-                    const Icon(Icons.add_circle, color: Color(0xFF0F172A), size: 24),
+                    Icon(
+                      Icons.add_circle,
+                      color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0F172A),
+                      size: 24,
+                    ),
                   ],
                 ),
               ),
