@@ -7,6 +7,7 @@ import '../models/inventory_list.dart';
 import '../services/database_helper.dart';
 import '../services/localization_service.dart';
 import '../services/share_service.dart';
+import '../widgets/item_icon_widget.dart';
 
 final List<CatalogItem> _quickStaplesCache = seedIndianCatalog.where((i) => [
       'grains_atta',
@@ -398,7 +399,7 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                           child: ActionChip(
                             side: BorderSide(color: borderColor),
                             backgroundColor: cardBgColor,
-                            avatar: Text(item.iconEmoji, style: const TextStyle(fontSize: 18)),
+                            avatar: ItemIconWidget(itemId: item.id, category: item.category, size: 22, iconSize: 11),
                             label: Text(
                               '+ $itemName',
                               style: TextStyle(
@@ -485,9 +486,12 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                               child: Icon(Icons.drag_indicator, color: Color(0xFF94A3B8), size: 24),
                             ),
                             const SizedBox(width: 8),
-                            Text(
-                              item.catalogItem?.iconEmoji ?? '📦',
-                              style: const TextStyle(fontSize: 34),
+                            ItemIconWidget(
+                              itemId: item.catalogId,
+                              category: item.category,
+                              emojiHint: item.catalogItem?.iconEmoji,
+                              size: 44,
+                              iconSize: 22,
                             ),
                             const SizedBox(width: 12),
                             Expanded(

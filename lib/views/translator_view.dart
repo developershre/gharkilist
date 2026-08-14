@@ -3,6 +3,7 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import '../data/indian_pantry_catalog.dart';
 import '../models/catalog_item.dart';
 import '../models/inventory_item.dart';
+import '../widgets/item_icon_widget.dart';
 
 class TranslatorView extends StatefulWidget {
   final Function(InventoryItem item) onItemAdded;
@@ -113,7 +114,13 @@ class _TranslatorViewState extends State<TranslatorView> {
                           ),
                           child: ListTile(
                             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            leading: Text(item.iconEmoji, style: const TextStyle(fontSize: 32)),
+                            leading: ItemIconWidget(
+                              itemId: item.id,
+                              category: item.category,
+                              emojiHint: item.iconEmoji,
+                              size: 42,
+                              iconSize: 20,
+                            ),
                             title: Row(
                               children: [
                                 Text(

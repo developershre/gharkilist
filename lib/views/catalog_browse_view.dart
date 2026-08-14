@@ -5,6 +5,7 @@ import '../models/catalog_item.dart';
 import '../models/inventory_item.dart';
 import '../services/database_helper.dart';
 import '../services/localization_service.dart';
+import '../widgets/item_icon_widget.dart';
 import 'item_detail_sheet.dart';
 
 class CatalogBrowseView extends StatefulWidget {
@@ -285,9 +286,12 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
                             ),
                             child: ListTile(
                               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                              leading: Text(
-                                item.iconEmoji,
-                                style: const TextStyle(fontSize: 32),
+                              leading: ItemIconWidget(
+                                itemId: item.id,
+                                category: item.category,
+                                emojiHint: item.iconEmoji,
+                                size: 42,
+                                iconSize: 20,
                               ),
                               title: Text(
                                 itemName,

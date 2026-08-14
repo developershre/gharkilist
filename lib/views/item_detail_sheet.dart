@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../widgets/item_icon_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import '../models/catalog_item.dart';
@@ -114,7 +115,13 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
           const SizedBox(height: 16),
           Row(
             children: [
-              Text(widget.catalogItem.iconEmoji, style: const TextStyle(fontSize: 38)),
+              ItemIconWidget(
+                itemId: widget.catalogItem.id,
+                category: widget.catalogItem.category,
+                emojiHint: widget.catalogItem.iconEmoji,
+                size: 52,
+                iconSize: 26,
+              ),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(

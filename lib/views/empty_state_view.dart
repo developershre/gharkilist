@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/item_icon_widget.dart';
 import '../data/indian_pantry_catalog.dart';
 import '../models/catalog_item.dart';
 import '../models/inventory_list.dart';
@@ -280,8 +281,14 @@ class EmptyStateView extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    Text(item.iconEmoji, style: const TextStyle(fontSize: 28)),
-                    const SizedBox(width: 10),
+                    ItemIconWidget(
+                      itemId: item.id,
+                      category: item.category,
+                      emojiHint: item.iconEmoji,
+                      size: 34,
+                      iconSize: 16,
+                    ),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         itemName,
