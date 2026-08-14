@@ -45,7 +45,6 @@ class InventoryHomeView extends StatefulWidget {
 }
 
 class _InventoryHomeViewState extends State<InventoryHomeView> {
-  String _selectedStatusFilter = 'ALL'; // 'ALL', 'OUT', 'LOW'
   late List<InventoryItem> _localItems;
 
   @override
@@ -85,15 +84,6 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
         ),
       );
     }
-  }
-
-  List<InventoryItem> get _filteredItems {
-    if (_selectedStatusFilter == 'OUT') {
-      return _localItems.where((i) => i.isOut).toList();
-    } else if (_selectedStatusFilter == 'LOW') {
-      return _localItems.where((i) => i.isLow && !i.isOut).toList();
-    }
-    return _localItems;
   }
 
   double get _totalEstimatedBudget {
@@ -203,16 +193,13 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final isHindi = widget.language == AppLanguage.hindi;
-    final filtered = _filteredItems;
     final totalCount = widget.items.length;
-    final outCount = widget.items.where((i) => i.isOut).length;
-    final lowCount = widget.items.where((i) => i.isLow && !i.isOut).length;
     final capped = totalCount >= DatabaseHelper.freeTierCap;
     final totalBudget = _totalEstimatedBudget;
 
     final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
     final cardBgColor = isDark ? const Color(0xFF1E293B) : Colors.white;
-    final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0); // Slate 700 / Slate 200
+    final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -224,7 +211,7 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Free Tier & Estimated Kirana Budget Bar
+                  // List Summary Banner & Drag Reorder Badge
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -247,9 +234,9 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                               children: [
                                 Text('${widget.activeList.iconEmoji} ', style: const TextStyle(fontSize: 22)),
                                 Text(
-                                  '${widget.activeList.name}: $totalCount / ${DatabaseHelper.freeTierCap}',
+                                  '${widget.activeList.name}: $totalCount items',
                                   style: TextStyle(
-                                    fontSize: 15,
+                                    fontSize: 16,
                                     fontWeight: FontWeight.bold,
                                     color: capped ? const Color(0xFFEF4444) : (isDark ? Colors.white : const Color(0xFF0F172A)),
                                   ),
@@ -261,10 +248,26 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                                 child: Text('Est. ₹${totalBudget.toInt()}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                               )
                             else
-                              ShadBadge(
-                                child: Text(
-                                  capped ? 'Cap Reached' : '${DatabaseHelper.freeTierCap - totalCount} slots left',
-                                  style: const TextStyle(fontSize: 12),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: borderColor),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.swap_vert, size: 16, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      isHindi ? 'क्रम बदलें' : 'Drag ↕️',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                           ],
@@ -278,96 +281,6 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                             valueColor: AlwaysStoppedAnimation<Color>(
                               capped ? const Color(0xFFEF4444) : const Color(0xFF38BDF8),
                             ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Smart Status Filter Pills & Drag Hint
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        FilterChip(
-                          side: BorderSide(color: borderColor),
-                          label: Text(
-                            isHindi ? '🟢 सब (${widget.items.length})' : '🟢 All (${widget.items.length})',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: _selectedStatusFilter == 'ALL'
-                                  ? (isDark ? Colors.white : const Color(0xFF0F172A))
-                                  : (isDark ? const Color(0xFFCBD5E1) : const Color(0xFF334155)),
-                            ),
-                          ),
-                          selected: _selectedStatusFilter == 'ALL',
-                          selectedColor: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-                          onSelected: (val) {
-                            if (val) setState(() => _selectedStatusFilter = 'ALL');
-                          },
-                        ),
-                        const SizedBox(width: 8),
-                        FilterChip(
-                          side: BorderSide(color: _selectedStatusFilter == 'OUT' ? const Color(0xFFEF4444) : borderColor),
-                          label: Text(
-                            isHindi ? '🔴 खत्म ($outCount)' : '🔴 Out ($outCount)',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: _selectedStatusFilter == 'OUT'
-                                  ? Colors.white
-                                  : (isDark ? const Color(0xFFCBD5E1) : const Color(0xFF334155)),
-                            ),
-                          ),
-                          selected: _selectedStatusFilter == 'OUT',
-                          selectedColor: const Color(0xFFEF4444),
-                          onSelected: (val) {
-                            setState(() => _selectedStatusFilter = val ? 'OUT' : 'ALL');
-                          },
-                        ),
-                        const SizedBox(width: 8),
-                        FilterChip(
-                          side: BorderSide(color: _selectedStatusFilter == 'LOW' ? const Color(0xFFF59E0B) : borderColor),
-                          label: Text(
-                            isHindi ? '🟡 कम ($lowCount)' : '🟡 Low ($lowCount)',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: _selectedStatusFilter == 'LOW'
-                                  ? Colors.white
-                                  : (isDark ? const Color(0xFFCBD5E1) : const Color(0xFF334155)),
-                            ),
-                          ),
-                          selected: _selectedStatusFilter == 'LOW',
-                          selectedColor: const Color(0xFFF59E0B),
-                          onSelected: (val) {
-                            setState(() => _selectedStatusFilter = val ? 'LOW' : 'ALL');
-                          },
-                        ),
-                        const SizedBox(width: 12),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: borderColor),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.swap_vert, size: 16, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
-                              const SizedBox(width: 4),
-                              Text(
-                                isHindi ? 'क्रम बदलें' : 'Reorder',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                                ),
-                              ),
-                            ],
                           ),
                         ),
                       ],
@@ -419,23 +332,19 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
             ),
           ),
 
-          // Reorderable Drag-and-Drop List with Single Clean Language Item Names
-          if (filtered.isEmpty)
+          // Reorderable Clean Grocery List (No Tallying / Out-of-Stock Buttons)
+          if (_localItems.isEmpty)
             SliverFillRemaining(
               hasScrollBody: false,
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.filter_alt_off, size: 52, color: Colors.grey),
+                    const Icon(Icons.playlist_add_check, size: 52, color: Colors.grey),
                     const SizedBox(height: 12),
                     Text(
-                      isHindi ? 'कोई सामान नहीं मिला' : 'No items match filter',
+                      isHindi ? 'आपकी सूची खाली है' : 'Your list is empty',
                       style: const TextStyle(fontSize: 15, color: Colors.grey),
-                    ),
-                    TextButton(
-                      onPressed: () => setState(() => _selectedStatusFilter = 'ALL'),
-                      child: Text(isHindi ? 'सब देखें' : 'Show All Items', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
@@ -443,10 +352,10 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
             )
           else
             SliverReorderableList(
-              itemCount: filtered.length,
+              itemCount: _localItems.length,
               onReorderItem: _onReorderItems,
               itemBuilder: (context, index) {
-                final item = filtered[index];
+                final item = _localItems[index];
                 final itemKey = ValueKey(item.id ?? item.catalogId);
                 final displayName = LocalizationService.getItemName(item.customName, item.nameHi, widget.language);
 
@@ -459,14 +368,7 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                     decoration: BoxDecoration(
                       color: cardBgColor,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: item.isOut
-                            ? const Color(0xFFEF4444)
-                            : item.isLow
-                                ? const Color(0xFFF59E0B)
-                                : borderColor, // Slate 700 in Dark Mode
-                        width: (item.isOut || item.isLow) ? 1.5 : 1.0,
-                      ),
+                      border: Border.all(color: borderColor),
                       boxShadow: [
                         if (!isDark)
                           BoxShadow(
@@ -476,171 +378,93 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                           ),
                       ],
                     ),
-                    child: Column(
+                    child: Row(
                       children: [
-                        Row(
-                          children: [
-                            // Drag Handle Icon (⋮⋮)
-                            const ReorderableDragStartListener(
-                              index: 0,
-                              child: Icon(Icons.drag_indicator, color: Color(0xFF94A3B8), size: 24),
+                        // Drag Handle Icon (⋮⋮)
+                        const ReorderableDragStartListener(
+                          index: 0,
+                          child: Icon(Icons.drag_indicator, color: Color(0xFF94A3B8), size: 24),
+                        ),
+                        const SizedBox(width: 8),
+                        ItemIconWidget(
+                          itemId: item.catalogId,
+                          category: item.category,
+                          emojiHint: item.catalogItem?.iconEmoji,
+                          size: 44,
+                          iconSize: 22,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            displayName,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
                             ),
-                            const SizedBox(width: 8),
-                            ItemIconWidget(
-                              itemId: item.catalogId,
-                              category: item.category,
-                              emojiHint: item.catalogItem?.iconEmoji,
-                              size: 44,
-                              iconSize: 22,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                displayName,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
-                                  decoration: item.isOut ? TextDecoration.lineThrough : null,
+                          ),
+                        ),
+                        // Large In-Line Quantity Stepper (- 1 kg +)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: borderColor),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              InkWell(
+                                onTap: () async {
+                                  if (item.id != null && item.quantity > 0.5) {
+                                    final step = (item.unit == 'g' || item.unit == 'ml') ? 100.0 : 1.0;
+                                    final updatedQty = (item.quantity - step).clamp(0.5, 999.0);
+                                    await DatabaseHelper.instance.updateInventoryItem(
+                                      item.copyWith(quantity: updatedQty),
+                                    );
+                                    widget.onRefresh();
+                                  }
+                                },
+                                child: const Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                  child: Icon(Icons.remove, size: 18),
                                 ),
                               ),
-                            ),
-                            // Large In-Line Quantity Stepper (- 1 kg +)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: borderColor),
+                              Text(
+                                '${item.quantity % 1 == 0 ? item.quantity.toInt() : item.quantity} ${item.unit}',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  InkWell(
-                                    onTap: () async {
-                                      if (item.id != null && item.quantity > 0.5) {
-                                        final step = (item.unit == 'g' || item.unit == 'ml') ? 100.0 : 1.0;
-                                        final updatedQty = (item.quantity - step).clamp(0.5, 999.0);
-                                        await DatabaseHelper.instance.updateInventoryItem(
-                                          item.copyWith(quantity: updatedQty),
-                                        );
-                                        widget.onRefresh();
-                                      }
-                                    },
-                                    child: const Padding(
-                                      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                                      child: Icon(Icons.remove, size: 18),
-                                    ),
-                                  ),
-                                  Text(
-                                    '${item.quantity % 1 == 0 ? item.quantity.toInt() : item.quantity} ${item.unit}',
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  InkWell(
-                                    onTap: () async {
-                                      if (item.id != null) {
-                                        final step = (item.unit == 'g' || item.unit == 'ml') ? 100.0 : 1.0;
-                                        final updatedQty = item.quantity + step;
-                                        await DatabaseHelper.instance.updateInventoryItem(
-                                          item.copyWith(quantity: updatedQty),
-                                        );
-                                        widget.onRefresh();
-                                      }
-                                    },
-                                    child: const Padding(
-                                      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                                      child: Icon(Icons.add, size: 18),
-                                    ),
-                                  ),
-                                ],
+                              InkWell(
+                                onTap: () async {
+                                  if (item.id != null) {
+                                    final step = (item.unit == 'g' || item.unit == 'ml') ? 100.0 : 1.0;
+                                    final updatedQty = item.quantity + step;
+                                    await DatabaseHelper.instance.updateInventoryItem(
+                                      item.copyWith(quantity: updatedQty),
+                                    );
+                                    widget.onRefresh();
+                                  }
+                                },
+                                child: const Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                  child: Icon(Icons.add, size: 18),
+                                ),
                               ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline, color: Color(0xFFEF4444), size: 22),
-                              onPressed: item.id != null
-                                  ? () async {
-                                      await DatabaseHelper.instance.deleteInventoryItem(item.id!);
-                                      widget.onRefresh();
-                                    }
-                                  : null,
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 12),
-                        Divider(height: 1, color: borderColor),
-                        const SizedBox(height: 10),
-
-                        // Large 1-Tap Direct Status Controls: Available / Low / Out
-                        Row(
-                          children: [
-                            Text(
-                              isHindi ? 'स्थिति:' : 'Status:',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  _buildStatusButton(
-                                    label: isHindi ? 'स्टॉक में है' : 'In Stock',
-                                    isSelected: !item.isLow && !item.isOut,
-                                    activeColor: const Color(0xFF22C55E),
-                                    borderColor: borderColor,
-                                    onTap: () async {
-                                      if (item.id != null) {
-                                        await DatabaseHelper.instance.toggleStockStatus(
-                                          item.id!,
-                                          isLow: false,
-                                          isOut: false,
-                                        );
-                                        widget.onRefresh();
-                                      }
-                                    },
-                                  ),
-                                  _buildStatusButton(
-                                    label: isHindi ? 'कम है' : 'Low',
-                                    isSelected: item.isLow,
-                                    activeColor: const Color(0xFFF59E0B),
-                                    borderColor: borderColor,
-                                    onTap: () async {
-                                      if (item.id != null) {
-                                        await DatabaseHelper.instance.toggleStockStatus(
-                                          item.id!,
-                                          isLow: true,
-                                          isOut: false,
-                                        );
-                                        widget.onRefresh();
-                                      }
-                                    },
-                                  ),
-                                  _buildStatusButton(
-                                    label: isHindi ? 'खत्म है' : 'Out',
-                                    isSelected: item.isOut,
-                                    activeColor: const Color(0xFFEF4444),
-                                    borderColor: borderColor,
-                                    onTap: () async {
-                                      if (item.id != null) {
-                                        await DatabaseHelper.instance.toggleStockStatus(
-                                          item.id!,
-                                          isLow: false,
-                                          isOut: true,
-                                        );
-                                        widget.onRefresh();
-                                      }
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, color: Color(0xFFEF4444), size: 22),
+                          onPressed: item.id != null
+                              ? () async {
+                                  await DatabaseHelper.instance.deleteInventoryItem(item.id!);
+                                  widget.onRefresh();
+                                }
+                              : null,
                         ),
                       ],
                     ),
@@ -710,38 +534,6 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
               child: const Icon(Icons.add, size: 26),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusButton({
-    required String label,
-    required bool isSelected,
-    required Color activeColor,
-    required Color borderColor,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: isSelected ? activeColor : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isSelected ? activeColor : borderColor,
-            width: 1.2,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-            color: isSelected ? Colors.white : const Color(0xFF94A3B8),
-          ),
         ),
       ),
     );

@@ -29,8 +29,6 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
   late TextEditingController _quantityController;
   late TextEditingController _priceController;
   late String _selectedUnit;
-  bool _isLow = false;
-  bool _isOut = false;
 
   @override
   void initState() {
@@ -68,8 +66,6 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
       quantity: qty,
       unit: _selectedUnit,
       estimatedPrice: price,
-      isLow: _isLow,
-      isOut: _isOut,
       capturedPhotoPath: widget.capturedPhotoPath,
       catalogItem: widget.catalogItem,
     );
@@ -225,37 +221,6 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
             controller: _priceController,
             keyboardType: TextInputType.number,
             placeholder: const Text('e.g. 120'),
-          ),
-          const SizedBox(height: 16),
-
-          Row(
-            children: [
-              ChoiceChip(
-                side: BorderSide(color: _isLow ? const Color(0xFFF59E0B) : borderColor),
-                label: Text(isHindi ? '🟡 कम है' : '🟡 Low'),
-                selected: _isLow,
-                selectedColor: const Color(0xFFF59E0B),
-                onSelected: (val) {
-                  setState(() {
-                    _isLow = val;
-                    if (val) _isOut = false;
-                  });
-                },
-              ),
-              const SizedBox(width: 10),
-              ChoiceChip(
-                side: BorderSide(color: _isOut ? const Color(0xFFEF4444) : borderColor),
-                label: Text(isHindi ? '🔴 खत्म है' : '🔴 Out of Stock'),
-                selected: _isOut,
-                selectedColor: const Color(0xFFEF4444),
-                onSelected: (val) {
-                  setState(() {
-                    _isOut = val;
-                    if (val) _isLow = false;
-                  });
-                },
-              ),
-            ],
           ),
           const SizedBox(height: 20),
 

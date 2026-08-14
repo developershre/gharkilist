@@ -17,116 +17,48 @@ class ShareService {
           : '🛒 *Grocery List ($cleanListName)*\n\nList is currently empty!';
     }
 
-    final outItems = items.where((i) => i.isOut).toList();
-    final lowItems = items.where((i) => i.isLow && !i.isOut).toList();
-    final regularItems = items.where((i) => !i.isLow && !i.isOut).toList();
-
-    double totalEstimatedCost = 0.0;
-    for (final item in items) {
-      if (item.estimatedPrice != null && item.estimatedPrice! > 0) {
-        totalEstimatedCost += item.quantity * item.estimatedPrice!;
-      }
-    }
-
-    final buffer = StringBuffer();
+    final sb = StringBuffer();
     if (language == AppLanguage.hindi) {
-      buffer.writeln('🛒 *सामान की सूची ($cleanListName):*\n');
-
-      if (outItems.isNotEmpty) {
-        buffer.writeln('🔴 *खत्म (Bring these):*');
-        for (final item in outItems) {
-          final name = LocalizationService.getItemName(item.customName, item.nameHi, AppLanguage.hindi);
-          final qtyStr = _formatQuantity(item.quantity, item.unit);
-          final priceStr = item.estimatedPrice != null && item.estimatedPrice! > 0
-              ? ' (~₹${(item.quantity * item.estimatedPrice!).toInt()})'
-              : '';
-          buffer.writeln('• $name - *$qtyStr*$priceStr');
-        }
-      }
-
-      if (lowItems.isNotEmpty) {
-        if (outItems.isNotEmpty) buffer.writeln();
-        buffer.writeln('⚠️ *कम है (Running low):*');
-        for (final item in lowItems) {
-          final name = LocalizationService.getItemName(item.customName, item.nameHi, AppLanguage.hindi);
-          final qtyStr = _formatQuantity(item.quantity, item.unit);
-          final priceStr = item.estimatedPrice != null && item.estimatedPrice! > 0
-              ? ' (~₹${(item.quantity * item.estimatedPrice!).toInt()})'
-              : '';
-          buffer.writeln('• $name - *$qtyStr*$priceStr');
-        }
-      }
-
-      if (regularItems.isNotEmpty) {
-        if (outItems.isNotEmpty || lowItems.isNotEmpty) {
-          buffer.writeln('\n📦 *अन्य सामान:*');
-        }
-        for (final item in regularItems) {
-          final name = LocalizationService.getItemName(item.customName, item.nameHi, AppLanguage.hindi);
-          final qtyStr = _formatQuantity(item.quantity, item.unit);
-          final priceStr = item.estimatedPrice != null && item.estimatedPrice! > 0
-              ? ' (~₹${(item.quantity * item.estimatedPrice!).toInt()})'
-              : '';
-          buffer.writeln('• $name - *$qtyStr*$priceStr');
-        }
-      }
-
-      if (totalEstimatedCost > 0) {
-        buffer.writeln('\n💰 *कुल अनुमानित खर्च:* ₹${totalEstimatedCost.toInt()}');
-      }
+      sb.writeln('🛒 *घरेलू सामान सूची ($cleanListName)*\n');
     } else {
-      buffer.writeln('🛒 *Grocery List ($cleanListName):*\n');
-
-      if (outItems.isNotEmpty) {
-        buffer.writeln('🔴 *Out of Stock:*');
-        for (final item in outItems) {
-          final name = LocalizationService.getItemName(item.customName, item.nameHi, AppLanguage.english);
-          final qtyStr = _formatQuantity(item.quantity, item.unit);
-          final priceStr = item.estimatedPrice != null && item.estimatedPrice! > 0
-              ? ' (~₹${(item.quantity * item.estimatedPrice!).toInt()})'
-              : '';
-          buffer.writeln('• $name - *$qtyStr*$priceStr');
-        }
-      }
-
-      if (lowItems.isNotEmpty) {
-        if (outItems.isNotEmpty) buffer.writeln();
-        buffer.writeln('⚠️ *Running Low:*');
-        for (final item in lowItems) {
-          final name = LocalizationService.getItemName(item.customName, item.nameHi, AppLanguage.english);
-          final qtyStr = _formatQuantity(item.quantity, item.unit);
-          final priceStr = item.estimatedPrice != null && item.estimatedPrice! > 0
-              ? ' (~₹${(item.quantity * item.estimatedPrice!).toInt()})'
-              : '';
-          buffer.writeln('• $name - *$qtyStr*$priceStr');
-        }
-      }
-
-      if (regularItems.isNotEmpty) {
-        if (outItems.isNotEmpty || lowItems.isNotEmpty) {
-          buffer.writeln('\n📦 *Other Items:*');
-        }
-        for (final item in regularItems) {
-          final name = LocalizationService.getItemName(item.customName, item.nameHi, AppLanguage.english);
-          final qtyStr = _formatQuantity(item.quantity, item.unit);
-          final priceStr = item.estimatedPrice != null && item.estimatedPrice! > 0
-              ? ' (~₹${(item.quantity * item.estimatedPrice!).toInt()})'
-              : '';
-          buffer.writeln('• $name - *$qtyStr*$priceStr');
-        }
-      }
-
-      if (totalEstimatedCost > 0) {
-        buffer.writeln('\n💰 *Estimated Total Budget:* ₹${totalEstimatedCost.toInt()}');
-      }
+      sb.writeln('🛒 *Household Grocery List ($cleanListName)*\n');
     }
 
-    return buffer.toString().trim();
+    double totalEstPrice = 0.0;
+    for (int i = 0; i < items.length; i++) {
+      final item = items[i];
+      final name = LocalizationService.getItemName(
+        item.customName,
+        item.nameHi,
+        language,
+      );
+
+      final formattedQty = _formatQuantity(item.quantity, item.unit);
+      sb.write('${i + 1}. $name - $formattedQty');
+
+      if (item.estimatedPrice != null && item.estimatedPrice! > 0) {
+        final itemTotal = item.quantity * item.estimatedPrice!;
+        totalEstPrice += itemTotal;
+        sb.write(' (₹${itemTotal.toInt()})');
+      }
+      sb.writeln();
+    }
+
+    if (totalEstPrice > 0) {
+      sb.writeln('\n💰 *${language == AppLanguage.hindi ? 'अनुमानित कुल खर्च' : 'Estimated Total'}: ₹${totalEstPrice.toInt()}*');
+    }
+
+    sb.writeln('\n_— Bhandar Khata_');
+    return sb.toString();
   }
 
   static String _formatQuantity(double qty, String unit) {
-    if (qty <= 0) return unit;
-    final formattedQty = qty % 1 == 0 ? qty.toInt().toString() : qty.toStringAsFixed(1);
+    String formattedQty;
+    if (qty % 1 == 0) {
+      formattedQty = qty.toInt().toString();
+    } else {
+      formattedQty = qty.toStringAsFixed(1);
+    }
     return '$formattedQty $unit';
   }
 
