@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 import '../models/catalog_item.dart';
 import '../models/inventory_item.dart';
 import '../services/database_helper.dart';
 import '../services/localization_service.dart';
+import '../widgets/gharkilist_logo.dart';
 import '../widgets/item_icon_widget.dart';
 import 'item_detail_sheet.dart';
 
@@ -31,17 +31,6 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
   String _selectedCategory = 'All';
   bool _isLoading = true;
   Timer? _debounceTimer;
-
-  final List<String> _voiceSuggestions = [
-    'Atta',
-    'Basmati Rice',
-    'Toor Dal',
-    'Desi Ghee',
-    'Sugar',
-    'Agarbatti',
-    'Dolo 650',
-    'Milk'
-  ];
 
   @override
   void initState() {
@@ -84,61 +73,6 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
     });
   }
 
-  void _showVoiceSearchModal() {
-    final isHindi = widget.language == AppLanguage.hindi;
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF38BDF8).withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.mic, color: Color(0xFF0284C7), size: 38),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                isHindi ? 'बोल कर सामान ढूंढें' : 'Voice Search Catalog',
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                isHindi ? 'किसी भी नाम पर टैप करें या बोलें:' : 'Tap a sample chip or speak item name:',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 13, color: Colors.grey),
-              ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _voiceSuggestions.map((s) {
-                  return ActionChip(
-                    avatar: const Icon(Icons.mic, size: 16, color: Color(0xFF0284C7)),
-                    label: Text(s, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                    onPressed: () {
-                      _searchController.text = s;
-                      _onSearchChanged(s);
-                      Navigator.pop(context);
-                    },
-                  );
-                }).toList(),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   void _openItemDetail(CatalogItem item) {
     showModalBottomSheet(
       context: context,
@@ -158,163 +92,179 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final isHindi = widget.language == AppLanguage.hindi;
-
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
-    final cardBgColor = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final appBarBg = isDark ? const Color(0xFF0F172A) : Colors.white;
+    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
     final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1);
+    final textColor = isDark ? Colors.white : const Color(0xFF000000);
+    final subtextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final iconColor = isDark ? const Color(0xFFCBD5E1) : const Color(0xFF1E293B);
 
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-        backgroundColor: bgColor,
+        backgroundColor: appBarBg,
         elevation: 0,
-        title: Text(
-          isHindi ? 'सामान सूची' : 'Catalog Browse',
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: iconColor),
+          onPressed: () => Navigator.pop(context),
         ),
+        titleSpacing: 0,
+        title: const GharkiListLogoWidget(),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.settings_outlined, color: iconColor, size: 26),
+            onPressed: () => Navigator.pop(context),
+          ),
+          const SizedBox(width: 6),
+        ],
       ),
       body: Column(
         children: [
-          if (widget.capturedPhotoPath != null)
-            Container(
-              color: const Color(0xFF0EA5E9).withValues(alpha: 0.15),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          // Search Input Bar
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+            child: Container(
+              height: 46,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: borderColor),
+              ),
               child: Row(
                 children: [
-                  const Icon(Icons.camera_alt, color: Color(0xFF0284C7), size: 22),
-                  const SizedBox(width: 8),
+                  Icon(Icons.search, color: subtextColor, size: 20),
+                  const SizedBox(width: 10),
                   Expanded(
-                    child: Text(
-                      isHindi ? 'फोटो ली गई! फोटो जोड़ने के लिए सामान चुनें।' : 'Photo captured! Select item below to attach photo.',
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                    child: TextField(
+                      controller: _searchController,
+                      style: TextStyle(color: textColor, fontSize: 16),
+                      onChanged: _onSearchChanged,
+                      decoration: InputDecoration(
+                        hintText: 'Search',
+                        hintStyle: TextStyle(color: subtextColor, fontSize: 16),
+                        border: InputBorder.none,
+                        isDense: true,
+                      ),
                     ),
                   ),
+                  Icon(Icons.tune, color: subtextColor, size: 20),
                 ],
               ),
             ),
-          // Search & Voice Bar
-          Padding(
-            padding: const EdgeInsets.all(14.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: ShadInput(
-                    controller: _searchController,
-                    placeholder: Text(isHindi ? 'आटा, दाल, नमक, पूजा सामान खोजें...' : 'Search Atta, Dal, Salt, Pooja...'),
-                    leading: const Icon(Icons.search, size: 20),
-                    onChanged: _onSearchChanged,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.mic, color: Color(0xFF0284C7), size: 26),
-                  tooltip: isHindi ? 'बोल कर ढूंढें' : 'Voice Search',
-                  onPressed: _showVoiceSearchModal,
-                ),
-              ],
-            ),
           ),
-          // Category Filter Horizontal Pills with Slate 700 / 200 Borders & High Contrast Selected States
+
+          // Horizontal Category Filter Pills
           SizedBox(
-            height: 42,
+            height: 38,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: _categories.length,
               itemBuilder: (context, index) {
                 final cat = _categories[index];
                 final isSelected = cat == _selectedCategory;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: ChoiceChip(
-                    side: BorderSide(
-                      color: isSelected
-                          ? (isDark ? const Color(0xFF38BDF8) : const Color(0xFF0F172A))
-                          : borderColor,
-                    ),
-                    label: Text(
-                      cat,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                        color: isSelected
-                            ? (isDark ? const Color(0xFF0F172A) : Colors.white)
-                            : (isDark ? const Color(0xFFCBD5E1) : const Color(0xFF334155)),
+
+                if (isSelected) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 12.0),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00C853),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        cat,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
-                    selected: isSelected,
-                    selectedColor: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0F172A),
-                    onSelected: (selected) {
-                      if (selected) {
-                        setState(() {
-                          _selectedCategory = cat;
-                        });
-                        _onSearchChanged(_searchController.text);
-                      }
+                  );
+                }
+
+                return Padding(
+                  padding: const EdgeInsets.only(right: 16.0),
+                  child: InkWell(
+                    onTap: () {
+                      setState(() {
+                        _selectedCategory = cat;
+                      });
+                      _onSearchChanged(_searchController.text);
                     },
+                    child: Container(
+                      alignment: Alignment.center,
+                      child: Text(
+                        cat,
+                        style: TextStyle(
+                          color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF1E293B),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
                   ),
                 );
               },
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
 
-          // Catalog List with High Contrast Sky Blue Trailing Icons in Dark Mode
+          // Catalog Items List
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _catalogItems.isEmpty
-                    ? Center(child: Text(isHindi ? 'कोई सामान नहीं मिला' : 'No items found matching search.', style: const TextStyle(fontSize: 15)))
-                    : ListView.separated(
-                        padding: const EdgeInsets.all(14),
+                    ? Center(
+                        child: Text(
+                          'No items found matching search.',
+                          style: TextStyle(fontSize: 15, color: subtextColor),
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                         itemCount: _catalogItems.length,
-                        separatorBuilder: (context, index) => const SizedBox(height: 8),
                         itemBuilder: (context, index) {
                           final item = _catalogItems[index];
-                          final itemName = LocalizationService.getItemName(item.nameEn, item.nameHi, widget.language);
-                          final catName = LocalizationService.getCategoryName(item.category, item.categoryHi, widget.language);
 
-                          return Card(
-                            elevation: 0,
-                            color: cardBgColor,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              side: BorderSide(color: borderColor),
-                            ),
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                              leading: ItemIconWidget(
-                                itemId: item.id,
-                                category: item.category,
-                                emojiHint: item.iconEmoji,
-                                size: 42,
-                                iconSize: 20,
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            child: Material(
+                              color: cardBg,
+                              clipBehavior: Clip.antiAlias,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                side: BorderSide(color: borderColor),
                               ),
-                              title: Text(
-                                itemName,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                                leading: ItemIconWidget(
+                                  itemId: item.id,
+                                  category: item.category,
+                                  emojiHint: item.iconEmoji,
+                                  size: 50,
+                                  iconSize: 24,
                                 ),
-                              ),
-                              subtitle: Text(
-                                catName,
-                                style: TextStyle(
-                                  color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
+                                title: Text(
+                                  item.nameEn.replaceAll(RegExp(r'\s*\([^)]*\)'), ''),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                    color: textColor,
+                                  ),
                                 ),
+                                trailing: Icon(
+                                  Icons.add_circle_outline,
+                                  color: isDark ? const Color(0xFF00C853) : const Color(0xFF000000),
+                                  size: 26,
+                                ),
+                                onTap: () => _openItemDetail(item),
                               ),
-                              trailing: Icon(
-                                Icons.add_circle_outline,
-                                color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0F172A),
-                                size: 26,
-                              ),
-                              onTap: () => _openItemDetail(item),
                             ),
                           );
                         },
@@ -325,3 +275,4 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
     );
   }
 }
+

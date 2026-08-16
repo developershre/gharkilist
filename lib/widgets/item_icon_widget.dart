@@ -14,10 +14,33 @@ class ItemIconWidget extends StatelessWidget {
     required this.itemId,
     required this.category,
     this.emojiHint,
-    this.size = 42,
-    this.iconSize = 20,
+    this.size = 48,
+    this.iconSize = 22,
     this.backgroundColor,
   });
+
+  String? _getAssetImagePath() {
+    final lowerId = itemId.toLowerCase();
+    if (lowerId.contains('atta') || lowerId.contains('wheat') || lowerId.contains('aata')) {
+      return 'assets/images/aata.png';
+    }
+    if (lowerId.contains('rice') || lowerId.contains('chawal')) {
+      return 'assets/images/rice.png';
+    }
+    if (lowerId.contains('ghee')) {
+      return 'assets/images/ghee.png';
+    }
+    if (lowerId.contains('sugar') || lowerId.contains('cheeni')) {
+      return 'assets/images/sugar.png';
+    }
+    if (lowerId.contains('salt') || lowerId.contains('namak')) {
+      return 'assets/images/salt.png';
+    }
+    if (lowerId.contains('tea') || lowerId.contains('chai')) {
+      return 'assets/images/tea.png';
+    }
+    return null;
+  }
 
   dynamic _getVectorIconData() {
     final lowerId = itemId.toLowerCase();
@@ -96,35 +119,52 @@ class ItemIconWidget extends StatelessWidget {
     final lowerId = itemId.toLowerCase();
 
     if (lowerId.contains('atta') || lowerId.contains('grain')) {
-      return const Color(0xFFF59E0B); // Amber
+      return const Color(0xFFF59E0B);
     }
     if (lowerCat.contains('dal') || lowerCat.contains('pulse')) {
-      return const Color(0xFFEAB308); // Yellow
+      return const Color(0xFFEAB308);
     }
     if (lowerCat.contains('spice') || lowerCat.contains('masala')) {
-      return const Color(0xFFEF4444); // Red
+      return const Color(0xFFEF4444);
     }
     if (lowerCat.contains('dairy') || lowerId.contains('milk')) {
-      return const Color(0xFF0EA5E9); // Sky Blue
+      return const Color(0xFF0EA5E9);
     }
     if (lowerCat.contains('oil')) {
-      return const Color(0xFF84CC16); // Lime
+      return const Color(0xFF84CC16);
     }
     if (lowerCat.contains('pooja') || lowerCat.contains('sweet')) {
-      return const Color(0xFFEC4899); // Pink
+      return const Color(0xFFEC4899);
     }
     if (lowerCat.contains('clean')) {
-      return const Color(0xFF06B6D4); // Cyan
+      return const Color(0xFF06B6D4);
     }
     if (lowerCat.contains('medicine')) {
-      return const Color(0xFF10B981); // Emerald
+      return const Color(0xFF10B981);
     }
 
-    return const Color(0xFF6366F1); // Indigo
+    return const Color(0xFF6366F1);
   }
 
   @override
   Widget build(BuildContext context) {
+    final assetPath = _getAssetImagePath();
+    if (assetPath != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.asset(
+          assetPath,
+          width: size,
+          height: size,
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) => _buildIconFallback(context),
+        ),
+      );
+    }
+    return _buildIconFallback(context);
+  }
+
+  Widget _buildIconFallback(BuildContext context) {
     final badgeColor = _getBadgeColor(context);
     final iconData = _getVectorIconData();
 
@@ -148,3 +188,4 @@ class ItemIconWidget extends StatelessWidget {
     );
   }
 }
+

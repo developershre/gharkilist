@@ -123,12 +123,15 @@ class _TranslatorViewState extends State<TranslatorView> {
                             ),
                             title: Row(
                               children: [
-                                Text(
-                                  item.nameEn,
-                                  style: TextStyle(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.bold,
-                                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                Flexible(
+                                  child: Text(
+                                    item.nameEn,
+                                    style: TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                                 const SizedBox(width: 8),

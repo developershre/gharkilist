@@ -141,7 +141,7 @@ class _SettingsViewState extends State<SettingsView> {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.palette_outlined, color: Color(0xFF0EA5E9), size: 24),
+                      Icon(Icons.palette_outlined, color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0EA5E9), size: 24),
                       const SizedBox(width: 10),
                       Text(
                         isHindi ? 'थीम चुनें' : 'Select Theme',
@@ -210,7 +210,7 @@ class _SettingsViewState extends State<SettingsView> {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.language, color: Color(0xFF38BDF8), size: 24),
+                      Icon(Icons.language, color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7), size: 24),
                       const SizedBox(width: 10),
                       Text(
                         isHindi ? 'भाषा चुनें' : 'Select Language',
@@ -263,7 +263,7 @@ class _SettingsViewState extends State<SettingsView> {
             ),
             child: ListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              leading: const Icon(Icons.g_translate, color: Color(0xFF0284C7), size: 26),
+              leading: Icon(Icons.g_translate, color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7), size: 26),
               title: Text(
                 isHindi ? 'हिंदी / English अनुवादक' : 'Hindi / English Translator',
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -272,7 +272,7 @@ class _SettingsViewState extends State<SettingsView> {
                 isHindi ? 'सामान का अनुवाद और खोजें' : 'Translate and convert item names',
                 style: const TextStyle(fontSize: 13, color: Colors.grey),
               ),
-              trailing: const Icon(Icons.chevron_right),
+              trailing: Icon(Icons.chevron_right, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
               onTap: () {
                 Navigator.pop(context);
                 widget.onOpenTranslator();
@@ -300,7 +300,7 @@ class _SettingsViewState extends State<SettingsView> {
             ),
             child: ListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              leading: const Icon(Icons.currency_rupee, color: Color(0xFF22C55E), size: 26),
+              leading: Icon(Icons.currency_rupee, color: isDark ? const Color(0xFF4ADE80) : const Color(0xFF22C55E), size: 26),
               title: Text(
                 isHindi ? 'व्हाट्सएप में दाम दिखाएं' : 'Include Prices in WhatsApp',
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -352,10 +352,10 @@ class _SettingsViewState extends State<SettingsView> {
                 ),
                 const Divider(height: 1),
                 ListTile(
-                  leading: const Icon(Icons.delete_sweep, color: Color(0xFFEF4444), size: 24),
+                  leading: Icon(Icons.delete_sweep, color: isDark ? const Color(0xFFF87171) : const Color(0xFFEF4444), size: 24),
                   title: Text(
                     isHindi ? 'सूची के सारे सामान हटाएं' : 'Clear Active List Items',
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFFEF4444)),
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: isDark ? const Color(0xFFF87171) : const Color(0xFFEF4444)),
                   ),
                   subtitle: Text(
                     isHindi ? 'इस सूची से सभी सामान हटाएं' : 'Remove all items from this list',
@@ -387,17 +387,17 @@ class _SettingsViewState extends State<SettingsView> {
             ),
             child: Column(
               children: [
-                const ListTile(
-                  leading: Icon(Icons.inventory_2_outlined, color: Color(0xFF0EA5E9), size: 26),
-                  title: Text('Bhandar Khata (भंडार खाता)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  subtitle: Text(
+                ListTile(
+                  leading: Icon(Icons.inventory_2_outlined, color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0EA5E9), size: 26),
+                  title: const Text('Bhandar Khata (भंडार खाता)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  subtitle: const Text(
                     'Smart Household Pantry & Kirana Inventory Tracker for Indian Families',
                     style: TextStyle(fontSize: 13),
                   ),
                 ),
                 const Divider(height: 1),
                 ListTile(
-                  leading: const Icon(Icons.lock_outline, color: Color(0xFF38BDF8), size: 22),
+                  leading: Icon(Icons.lock_outline, color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7), size: 22),
                   title: Text(isHindi ? 'गोपनीयता (Privacy)' : 'Data Privacy', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                   subtitle: Text(
                     isHindi ? '100% ऑफ़लाइन व सुरक्षित - आपका डाटा सिर्फ आपके फोन पर है' : '100% Offline & Private - All data stays on your phone',
@@ -406,7 +406,7 @@ class _SettingsViewState extends State<SettingsView> {
                 ),
                 const Divider(height: 1),
                 ListTile(
-                  leading: const Icon(Icons.verified, color: Color(0xFF22C55E), size: 22),
+                  leading: Icon(Icons.verified, color: isDark ? const Color(0xFF4ADE80) : const Color(0xFF22C55E), size: 22),
                   title: const Text('Version', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                   trailing: Text(
                     'v1.0.0 (Release Build)',

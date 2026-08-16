@@ -160,12 +160,15 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                isHindi ? 'सूची बदलें (Select Inventory List)' : 'Select Inventory List',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+              Expanded(
+                child: Text(
+                  isHindi ? 'सूची बदलें (Select Inventory List)' : 'Select Inventory List',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               IconButton(
@@ -251,9 +254,12 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
                 children: [
                   const Icon(Icons.add, size: 20),
                   const SizedBox(width: 8),
-                  Text(
-                    isHindi ? '➕ नई सूची बनाएं (Pooja, Festival...)' : '➕ Create New Inventory List (Pooja, Festival...)',
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  Flexible(
+                    child: Text(
+                      isHindi ? '➕ नई सूची बनाएं (Pooja, Festival...)' : '➕ Create New Inventory List (Pooja, Festival...)',
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
               ),

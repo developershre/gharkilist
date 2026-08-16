@@ -146,21 +146,21 @@ class DatabaseHelper {
         final now = DateTime.now().toIso8601String();
         await db.insert('pantry_inventories', {
           'id': 1,
-          'name': 'रसोई का सामान (Kitchen)',
+          'name': 'Mahine ka',
           'icon_emoji': '🏠',
           'is_default': 1,
           'created_at': now,
         });
         await db.insert('pantry_inventories', {
           'id': 2,
-          'name': 'पूजा सामग्री (Pooja)',
+          'name': 'Rakhi ka',
           'icon_emoji': '🪔',
           'is_default': 0,
           'created_at': now,
         });
         await db.insert('pantry_inventories', {
           'id': 3,
-          'name': 'त्योहार व उत्सव (Festival)',
+          'name': 'Diwali ka',
           'icon_emoji': '🎆',
           'is_default': 0,
           'created_at': now,

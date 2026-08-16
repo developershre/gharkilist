@@ -8,10 +8,10 @@ import 'services/localization_service.dart';
 import 'views/catalog_browse_view.dart';
 import 'views/empty_state_view.dart';
 import 'views/inventory_home_view.dart';
-import 'views/inventory_switcher_sheet.dart';
 import 'views/scan_capture_view.dart';
 import 'views/settings_view.dart';
 import 'views/translator_view.dart';
+import 'widgets/gharkilist_logo.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,16 +54,12 @@ class BhandarKhataAppState extends State<BhandarKhataApp> {
       theme: ShadThemeData(
         brightness: Brightness.light,
         colorScheme: const ShadSlateColorScheme.light(),
-        textTheme: ShadTextTheme(
-          family: GoogleFonts.inter().fontFamily,
-        ),
+        textTheme: ShadTextTheme(family: GoogleFonts.inter().fontFamily),
       ),
       darkTheme: ShadThemeData(
         brightness: Brightness.dark,
         colorScheme: const ShadSlateColorScheme.dark(),
-        textTheme: ShadTextTheme(
-          family: GoogleFonts.inter().fontFamily,
-        ),
+        textTheme: ShadTextTheme(family: GoogleFonts.inter().fontFamily),
       ),
       themeMode: _themeMode,
       home: const MainHomeScreen(),
@@ -93,9 +89,16 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     final lists = await DatabaseHelper.instance.getAllInventories();
     final defaultList = lists.isNotEmpty
         ? lists.firstWhere((l) => l.isDefault, orElse: () => lists.first)
-        : InventoryList(id: 1, name: 'Kitchen Pantry', iconEmoji: '🏠', isDefault: true);
+        : InventoryList(
+            id: 1,
+            name: 'Kitchen Pantry',
+            iconEmoji: '🏠',
+            isDefault: true,
+          );
 
-    final items = await DatabaseHelper.instance.getInventoryItemsForList(defaultList.id ?? 1);
+    final items = await DatabaseHelper.instance.getInventoryItemsForList(
+      defaultList.id ?? 1,
+    );
 
     if (mounted) {
       setState(() {
@@ -108,7 +111,9 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
 
   Future<void> _refreshInventory() async {
     if (_activeList?.id == null) return;
-    final items = await DatabaseHelper.instance.getInventoryItemsForList(_activeList!.id!);
+    final items = await DatabaseHelper.instance.getInventoryItemsForList(
+      _activeList!.id!,
+    );
     if (mounted) {
       setState(() {
         _inventoryItems = items;
@@ -129,7 +134,9 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
       MaterialPageRoute(
         builder: (context) => ScanCaptureView(
           onItemAdded: (item) async {
-            final itemWithList = item.copyWith(inventoryId: _activeList?.id ?? 1);
+            final itemWithList = item.copyWith(
+              inventoryId: _activeList?.id ?? 1,
+            );
             await DatabaseHelper.instance.addInventoryItem(itemWithList);
             _refreshInventory();
           },
@@ -146,7 +153,9 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
         builder: (context) => CatalogBrowseView(
           language: appState.language,
           onItemAdded: (item) async {
-            final itemWithList = item.copyWith(inventoryId: _activeList?.id ?? 1);
+            final itemWithList = item.copyWith(
+              inventoryId: _activeList?.id ?? 1,
+            );
             await DatabaseHelper.instance.addInventoryItem(itemWithList);
             _refreshInventory();
           },
@@ -161,7 +170,9 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
       MaterialPageRoute(
         builder: (context) => TranslatorView(
           onItemAdded: (item) async {
-            final itemWithList = item.copyWith(inventoryId: _activeList?.id ?? 1);
+            final itemWithList = item.copyWith(
+              inventoryId: _activeList?.id ?? 1,
+            );
             await DatabaseHelper.instance.addInventoryItem(itemWithList);
             _refreshInventory();
           },
@@ -189,21 +200,6 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     );
   }
 
-  void _openSwitcherSheet() {
-    if (_activeList == null) return;
-    final appState = BhandarKhataApp.of(context);
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => InventorySwitcherSheet(
-        activeList: _activeList!,
-        language: appState.language,
-        onListSelected: _switchActiveList,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final appState = BhandarKhataApp.of(context);
@@ -212,64 +208,22 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     final language = appState.language;
 
     if (_isInitialLoading || _activeList == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    final displayListName = LocalizationService.getItemName(
-      _activeList!.name,
-      _activeList!.name,
-      language,
-    );
-
     return Scaffold(
-      // SINGLE CLEAN HEADER AT TOP
       appBar: AppBar(
-        backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+        backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
         elevation: 0,
-        title: InkWell(
-          onTap: _openSwitcherSheet,
-          borderRadius: BorderRadius.circular(20),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(_activeList!.iconEmoji, style: const TextStyle(fontSize: 22)),
-                const SizedBox(width: 8),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 180),
-                  child: Text(
-                    displayListName,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : const Color(0xFF0F172A),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Icon(
-                  Icons.arrow_drop_down,
-                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
-                ),
-              ],
-            ),
-          ),
-        ),
+        titleSpacing: 16,
+        title: const GharkiListLogoWidget(),
         actions: [
-          // ONLY SETTINGS ICON IN HEADER
           IconButton(
-            icon: const Icon(Icons.settings, color: Color(0xFF64748B), size: 26),
+            icon: Icon(
+              Icons.settings_outlined,
+              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF1E293B),
+              size: 26,
+            ),
             tooltip: language == AppLanguage.english ? 'Settings' : 'सेटिंग्स',
             onPressed: _openSettingsView,
           ),
@@ -282,6 +236,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
               language: language,
               onScanTap: _openScanView,
               onBrowseTap: _openBrowseView,
+              onListChanged: _switchActiveList,
               onQuickAddCatalogItem: (item) async {
                 final inv = InventoryItem(
                   inventoryId: _activeList!.id ?? 1,
