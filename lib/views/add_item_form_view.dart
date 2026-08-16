@@ -4,15 +4,18 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import '../models/inventory_item.dart';
 import '../services/database_helper.dart';
+import '../services/localization_service.dart';
 
 class AddItemFormView extends StatefulWidget {
   final int inventoryId;
+  final AppLanguage language;
   final String? initialPhotoPath;
   final VoidCallback onItemAdded;
 
   const AddItemFormView({
     super.key,
     required this.inventoryId,
+    this.language = AppLanguage.english,
     this.initialPhotoPath,
     required this.onItemAdded,
   });
@@ -29,7 +32,7 @@ class _AddItemFormViewState extends State<AddItemFormView> {
   String? _photoPath;
   String _selectedCategory = 'Flour & Grains';
   String _selectedUnit = 'PCS';
-  String _stockStatus = 'In Stock'; // 'In Stock', 'Low Stock', 'Out of Stock'
+  String _stockStatus = 'In Stock';
   bool _isSaving = false;
 
   final List<String> _categories = [
@@ -43,7 +46,7 @@ class _AddItemFormViewState extends State<AddItemFormView> {
     'Other',
   ];
 
-  final List<String> _units = ['PCS', 'KG', 'G', 'L', 'ML', 'PKT'];
+  final List<String> _units = ['PCS', 'KG', 'G', 'L', 'ML', 'PKT', 'BOTTLE', 'CAN', 'BOX', 'STRIP', 'SACHET'];
 
   @override
   void initState() {
@@ -80,12 +83,13 @@ class _AddItemFormViewState extends State<AddItemFormView> {
   }
 
   Future<void> _saveItem() async {
+    final isHindi = widget.language == AppLanguage.hindi;
     final name = _nameController.text.trim();
     if (name.isEmpty) {
       ShadToaster.of(context).show(
-        const ShadToast(
-          title: Text('Item Name Required'),
-          description: Text('Please enter an item name before saving.'),
+        ShadToast(
+          title: Text(isHindi ? 'सामान का नाम आवश्यक है' : 'Item Name Required'),
+          description: Text(isHindi ? 'कृपया सहेजने से पहले सामान का नाम दर्ज करें।' : 'Please enter an item name before saving.'),
         ),
       );
       return;
@@ -104,7 +108,7 @@ class _AddItemFormViewState extends State<AddItemFormView> {
         nameHi: name,
         category: _selectedCategory,
         quantity: qty,
-        unit: _selectedUnit,
+        unit: LocalizationService.normalizeUnit(_selectedUnit),
         estimatedPrice: price,
         isLow: _stockStatus == 'Low Stock',
         isOut: _stockStatus == 'Out of Stock',
@@ -117,8 +121,8 @@ class _AddItemFormViewState extends State<AddItemFormView> {
       if (mounted) {
         ShadToaster.of(context).show(
           ShadToast(
-            title: const Text('Item Saved'),
-            description: Text('"$name" added to SQLite database.'),
+            title: Text(isHindi ? 'सामान सहेजा गया' : 'Item Saved'),
+            description: Text(isHindi ? '"$name" सूची में जोड़ा गया।' : '"$name" added to inventory.'),
           ),
         );
         Navigator.pop(context);
@@ -128,7 +132,7 @@ class _AddItemFormViewState extends State<AddItemFormView> {
         setState(() => _isSaving = false);
         ShadToaster.of(context).show(
           ShadToast(
-            title: const Text('Error Saving Item'),
+            title: Text(isHindi ? 'त्रुटि' : 'Error Saving Item'),
             description: Text(e.toString()),
           ),
         );
@@ -140,6 +144,7 @@ class _AddItemFormViewState extends State<AddItemFormView> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final isHindi = widget.language == AppLanguage.hindi;
 
     final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
     final cardBgColor = isDark ? const Color(0xFF1E293B) : Colors.white;
@@ -148,14 +153,17 @@ class _AddItemFormViewState extends State<AddItemFormView> {
     final subtextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
     final activeColor = const Color(0xFF00C853);
 
+    final normalizedUnit = LocalizationService.normalizeUnit(_selectedUnit).toUpperCase();
+    final safeUnitValue = _units.contains(normalizedUnit) ? normalizedUnit : _units.first;
+
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
         backgroundColor: cardBgColor,
         elevation: 0,
-        title: const Text(
-          'Add Item (सामान जोड़ें)',
-          style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
+        title: Text(
+          isHindi ? 'नया सामान जोड़ें' : 'Add Custom Item',
+          style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
         ),
       ),
       body: SingleChildScrollView(
@@ -165,7 +173,7 @@ class _AddItemFormViewState extends State<AddItemFormView> {
           children: [
             // Photo Header Box
             Text(
-              'Item Photo (फोटो)',
+              isHindi ? 'सामान की फोटो' : 'Item Photo',
               style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: textColor),
             ),
             const SizedBox(height: 8),
@@ -212,7 +220,7 @@ class _AddItemFormViewState extends State<AddItemFormView> {
                         Icon(Icons.add_a_photo_outlined, size: 48, color: subtextColor),
                         const SizedBox(height: 10),
                         Text(
-                          'No photo attached yet',
+                          isHindi ? 'कोई फोटो नहीं चुनी गई' : 'No photo attached yet',
                           style: TextStyle(fontSize: 14, color: subtextColor),
                         ),
                         const SizedBox(height: 12),
@@ -222,7 +230,7 @@ class _AddItemFormViewState extends State<AddItemFormView> {
                             OutlinedButton.icon(
                               onPressed: _takePhoto,
                               icon: const Icon(Icons.camera_alt, size: 18),
-                              label: const Text('Camera'),
+                              label: Text(isHindi ? 'कैमरा' : 'Camera'),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: activeColor,
                                 side: BorderSide(color: activeColor),
@@ -232,7 +240,7 @@ class _AddItemFormViewState extends State<AddItemFormView> {
                             OutlinedButton.icon(
                               onPressed: _pickFromGallery,
                               icon: const Icon(Icons.photo_library, size: 18),
-                              label: const Text('Gallery'),
+                              label: Text(isHindi ? 'गैलरी' : 'Gallery'),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: subtextColor,
                                 side: BorderSide(color: borderColor),
@@ -251,7 +259,7 @@ class _AddItemFormViewState extends State<AddItemFormView> {
                   TextButton.icon(
                     onPressed: _takePhoto,
                     icon: const Icon(Icons.camera_alt, size: 16),
-                    label: const Text('Retake Photo'),
+                    label: Text(isHindi ? 'फिर से फोटो लें' : 'Retake Photo'),
                     style: TextButton.styleFrom(foregroundColor: activeColor),
                   ),
                 ],
@@ -261,7 +269,7 @@ class _AddItemFormViewState extends State<AddItemFormView> {
 
             // Item Name Field
             Text(
-              'Item Name (सामान का नाम) *',
+              isHindi ? 'सामान का नाम *' : 'Item Name *',
               style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: textColor),
             ),
             const SizedBox(height: 8),
@@ -269,7 +277,7 @@ class _AddItemFormViewState extends State<AddItemFormView> {
               controller: _nameController,
               style: TextStyle(color: textColor, fontSize: 16),
               decoration: InputDecoration(
-                hintText: 'e.g. Aashirvaad Atta 5kg, Tata Salt...',
+                hintText: isHindi ? 'उदा. आटा 5 किग्रा, नमक...' : 'e.g. Aashirvaad Atta 5kg, Tata Salt...',
                 hintStyle: TextStyle(color: subtextColor, fontSize: 15),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 filled: true,
@@ -292,17 +300,18 @@ class _AddItemFormViewState extends State<AddItemFormView> {
 
             // Category Picker
             Text(
-              'Category (कैटेगरी)',
+              isHindi ? 'श्रेणी (Category)' : 'Category',
               style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: textColor),
             ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: _categories.map((cat) {
-                final isSel = _selectedCategory == cat;
+              children: _categories.map((catKey) {
+                final label = LocalizationService.getCategoryName(catKey, widget.language);
+                final isSel = _selectedCategory == catKey;
                 return ChoiceChip(
-                  label: Text(cat),
+                  label: Text(label),
                   selected: isSel,
                   selectedColor: activeColor,
                   labelStyle: TextStyle(
@@ -310,7 +319,7 @@ class _AddItemFormViewState extends State<AddItemFormView> {
                     fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
                   ),
                   onSelected: (val) {
-                    setState(() => _selectedCategory = cat);
+                    setState(() => _selectedCategory = catKey);
                   },
                 );
               }).toList(),
@@ -326,7 +335,7 @@ class _AddItemFormViewState extends State<AddItemFormView> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Quantity (मात्रा)',
+                        isHindi ? 'मात्रा' : 'Quantity',
                         style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: textColor),
                       ),
                       const SizedBox(height: 8),
@@ -363,7 +372,7 @@ class _AddItemFormViewState extends State<AddItemFormView> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Unit (इकाई)',
+                        isHindi ? 'इकाई' : 'Unit',
                         style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: textColor),
                       ),
                       const SizedBox(height: 8),
@@ -376,12 +385,13 @@ class _AddItemFormViewState extends State<AddItemFormView> {
                         ),
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<String>(
-                            value: _selectedUnit,
+                            value: safeUnitValue,
                             isExpanded: true,
                             dropdownColor: cardBgColor,
                             style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.bold),
                             items: _units.map((u) {
-                              return DropdownMenuItem(value: u, child: Text(u));
+                              final uLabel = LocalizationService.getUnitLabel(u.toLowerCase(), widget.language);
+                              return DropdownMenuItem(value: u, child: Text(uLabel));
                             }).toList(),
                             onChanged: (val) {
                               if (val != null) setState(() => _selectedUnit = val);
@@ -398,7 +408,7 @@ class _AddItemFormViewState extends State<AddItemFormView> {
 
             // Estimated Price
             Text(
-              'Estimated Price (अनुमानित कीमत - ₹)',
+              isHindi ? 'अनुमानित कीमत (₹)' : 'Estimated Price (₹)',
               style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: textColor),
             ),
             const SizedBox(height: 8),
@@ -407,7 +417,7 @@ class _AddItemFormViewState extends State<AddItemFormView> {
               style: TextStyle(color: textColor, fontSize: 16),
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               decoration: InputDecoration(
-                hintText: 'e.g. 150',
+                hintText: isHindi ? 'उदा. 150' : 'e.g. 150',
                 hintStyle: TextStyle(color: subtextColor, fontSize: 15),
                 prefixIcon: Padding(
                   padding: const EdgeInsets.only(left: 16, right: 8),
@@ -435,16 +445,17 @@ class _AddItemFormViewState extends State<AddItemFormView> {
 
             // Stock Status ChoiceChips
             Text(
-              'Stock Status (उपलब्धता)',
+              isHindi ? 'स्टॉक स्थिति' : 'Stock Status',
               style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: textColor),
             ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
-              children: ['In Stock', 'Low Stock', 'Out of Stock'].map((stk) {
-                final isSel = _stockStatus == stk;
+              children: ['In Stock', 'Low Stock', 'Out of Stock'].map((stkKey) {
+                final label = LocalizationService.getStatusLabel(stkKey, widget.language);
+                final isSel = _stockStatus == stkKey;
                 return ChoiceChip(
-                  label: Text(stk),
+                  label: Text(label),
                   selected: isSel,
                   selectedColor: activeColor,
                   labelStyle: TextStyle(
@@ -452,7 +463,7 @@ class _AddItemFormViewState extends State<AddItemFormView> {
                     fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
                   ),
                   onSelected: (val) {
-                    setState(() => _stockStatus = stk);
+                    setState(() => _stockStatus = stkKey);
                   },
                 );
               }).toList(),
@@ -477,14 +488,14 @@ class _AddItemFormViewState extends State<AddItemFormView> {
                         height: 24,
                         child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                       )
-                    : const Row(
+                    : Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.check_circle_outline, size: 22),
-                          SizedBox(width: 8),
+                          const Icon(Icons.check_circle_outline, size: 22),
+                          const SizedBox(width: 8),
                           Text(
-                            'Save to Inventory (सामान जोड़ें)',
-                            style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                            isHindi ? 'सूची में सहेजें' : 'Save to Inventory',
+                            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),

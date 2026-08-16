@@ -49,13 +49,18 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text(isHindi ? 'नई सूची बनाएं' : 'Create Custom Inventory List', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          title: Text(
+            isHindi ? 'नई सूची बनाएं' : 'Create Custom Inventory List',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                isHindi ? 'सूची का नाम लिखें (जैसे त्यौहार, पूजा, दवायां):' : 'Enter List Name (e.g. Navratri, Party, Medicine):',
+                isHindi
+                    ? 'सूची का नाम लिखें (जैसे त्यौहार, पूजा, दवाएं):'
+                    : 'Enter List Name (e.g. Festival, Pooja, Medicine):',
                 style: const TextStyle(fontSize: 13, color: Colors.grey),
               ),
               const SizedBox(height: 8),
@@ -140,7 +145,7 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
             children: [
               Expanded(
                 child: Text(
-                  isHindi ? 'सूची बदलें (Select Inventory List)' : 'Select Inventory List',
+                  isHindi ? 'सूची बदलें' : 'Select Inventory List',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -152,7 +157,7 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
               IconButton(
                 icon: Icon(Icons.add_circle_outline, color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0F172A), size: 26),
                 onPressed: _showCreateDialog,
-                tooltip: 'Create New Inventory List',
+                tooltip: isHindi ? 'नई सूची बनाएं' : 'Create New Inventory List',
               ),
             ],
           ),
@@ -167,6 +172,7 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
                 itemBuilder: (context, index) {
                   final list = _lists[index];
                   final isSelected = list.id == widget.activeList.id;
+                  final displayName = LocalizationService.getListName(list.name, widget.language);
 
                   return Card(
                     elevation: 0,
@@ -194,7 +200,7 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
                           shape: BoxShape.circle,
                         ),
                         child: Text(
-                          list.name.isNotEmpty ? list.name[0].toUpperCase() : 'L',
+                          displayName.isNotEmpty ? displayName[0].toUpperCase() : 'L',
                           style: const TextStyle(
                             color: Color(0xFF00C853),
                             fontWeight: FontWeight.bold,
@@ -203,7 +209,7 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
                         ),
                       ),
                       title: Text(
-                        list.name,
+                        displayName,
                         style: TextStyle(
                           fontSize: 17,
                           fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
@@ -250,7 +256,7 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
                   const SizedBox(width: 8),
                   Flexible(
                     child: Text(
-                      isHindi ? 'नई सूची बनाएं (Pooja, Festival...)' : 'Create New Inventory List (Pooja, Festival...)',
+                      isHindi ? 'नई सूची बनाएं' : 'Create New Inventory List',
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -264,4 +270,3 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
     );
   }
 }
-

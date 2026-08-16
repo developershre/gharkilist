@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../models/inventory_list.dart';
+import '../services/localization_service.dart';
 
 class InventoryTagBar extends StatelessWidget {
   final List<InventoryList> allLists;
   final InventoryList activeList;
+  final AppLanguage language;
   final ValueChanged<InventoryList> onListSelected;
   final VoidCallback onCreateNewTap;
 
@@ -11,6 +13,7 @@ class InventoryTagBar extends StatelessWidget {
     super.key,
     required this.allLists,
     required this.activeList,
+    this.language = AppLanguage.english,
     required this.onListSelected,
     required this.onCreateNewTap,
   });
@@ -18,6 +21,7 @@ class InventoryTagBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final listsToDisplay = allLists.isNotEmpty ? allLists : [activeList];
+    final isHindi = language == AppLanguage.hindi;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
@@ -28,10 +32,12 @@ class InventoryTagBar extends StatelessWidget {
             ...listsToDisplay.map((list) {
               final isSelected = activeList.id == list.id ||
                   (activeList.id == null && activeList.name.toLowerCase() == list.name.toLowerCase());
+              final displayName = LocalizationService.getListName(list.name, language);
+
               return Padding(
                 padding: const EdgeInsets.only(right: 8.0),
                 child: _TagPill(
-                  label: list.name,
+                  label: displayName,
                   isSelected: isSelected,
                   onTap: () => onListSelected(list),
                 ),
@@ -47,9 +53,9 @@ class InventoryTagBar extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: const Color(0xFF00C853)),
                 ),
-                child: const Text(
-                  '+ New',
-                  style: TextStyle(
+                child: Text(
+                  isHindi ? '+ नया' : '+ New',
+                  style: const TextStyle(
                     color: Color(0xFF00C853),
                     fontWeight: FontWeight.bold,
                     fontSize: 13,

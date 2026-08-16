@@ -1128,7 +1128,7 @@ final List<CatalogItem> seedIndianCatalog = [
   CatalogItem(
     id: 'care_bathing_soap',
     nameEn: 'Bathing Soap (Dettol / Lux / Dove)',
-    nameHi: 'नाहाने का साबुन (Soap)',
+    nameHi: 'नहाने का साबुन (Soap)',
     category: 'Personal Care',
     categoryHi: 'व्यक्तिगत देखभाल',
     aliases: ['soap', 'bathing soap', 'dettol', 'lux', 'dove', 'pears'],

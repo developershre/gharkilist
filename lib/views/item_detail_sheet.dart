@@ -1,5 +1,4 @@
 import 'dart:io';
-import '../widgets/item_icon_widget.dart';
 import 'package:flutter/material.dart';
 import '../models/catalog_item.dart';
 import '../models/inventory_item.dart';
@@ -7,22 +6,22 @@ import '../services/localization_service.dart';
 
 class ItemDetailSheet extends StatefulWidget {
   final CatalogItem catalogItem;
+  final InventoryItem? existingItem;
   final int inventoryId;
   final String? capturedPhotoPath;
   final AppLanguage language;
   final Function(InventoryItem item) onSave;
   final VoidCallback? onDelete;
-  final InventoryItem? existingItem;
 
   const ItemDetailSheet({
     super.key,
     required this.catalogItem,
+    this.existingItem,
     this.inventoryId = 1,
     this.capturedPhotoPath,
     this.language = AppLanguage.english,
     required this.onSave,
     this.onDelete,
-    this.existingItem,
   });
 
   @override
@@ -35,15 +34,30 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
   late TextEditingController _priceController;
   late String _selectedUnit;
 
+  List<String> get _availableUnits {
+    final set = <String>{};
+    for (final u in widget.catalogItem.allowedUnits) {
+      set.add(LocalizationService.normalizeUnit(u).toUpperCase());
+    }
+    set.add(LocalizationService.normalizeUnit(widget.catalogItem.defaultUnit).toUpperCase());
+    if (_selectedUnit.isNotEmpty) {
+      set.add(LocalizationService.normalizeUnit(_selectedUnit).toUpperCase());
+    }
+    set.addAll(['KG', 'G', 'L', 'ML', 'PCS', 'PKT', 'BOTTLE', 'CAN', 'BOX', 'STRIP', 'SACHET']);
+    return set.toList();
+  }
+
   @override
   void initState() {
     super.initState();
-    final displayName = widget.existingItem?.customName ??
-        LocalizationService.getItemName(
-          widget.catalogItem.nameEn,
-          widget.catalogItem.nameHi,
-          widget.language,
-        );
+    final displayName = widget.existingItem != null
+        ? widget.existingItem!.customName
+        : LocalizationService.getItemName(
+            widget.catalogItem.nameEn,
+            widget.catalogItem.nameHi,
+            widget.language,
+          );
+
     _customNameController = TextEditingController(text: displayName);
     _quantityController = TextEditingController(
       text: widget.existingItem != null
@@ -82,7 +96,7 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
       nameHi: widget.catalogItem.nameHi,
       category: widget.catalogItem.category,
       quantity: qty,
-      unit: _selectedUnit,
+      unit: LocalizationService.normalizeUnit(_selectedUnit),
       estimatedPrice: price,
       capturedPhotoPath: widget.capturedPhotoPath,
       catalogItem: widget.catalogItem,
@@ -94,54 +108,62 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isHindi = widget.language == AppLanguage.hindi;
     final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
     final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1);
     final textColor = isDark ? Colors.white : const Color(0xFF000000);
+    final subtextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
     final hintColor = isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
-    final handleColor = isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1);
 
-    final cleanTitle = widget.catalogItem.nameEn.replaceAll(RegExp(r'\s*\([^)]*\)'), '');
+    final cleanTitle = LocalizationService.getItemName(
+      widget.catalogItem.nameEn,
+      widget.catalogItem.nameHi,
+      widget.language,
+    );
+
+    final categoryLabel = LocalizationService.getCategoryName(
+      widget.catalogItem.category,
+      widget.language,
+      categoryHi: widget.catalogItem.categoryHi,
+    );
+
+    final activeUnits = _availableUnits;
+    final normalizedSelected = LocalizationService.normalizeUnit(_selectedUnit).toUpperCase();
+    final safeUnitValue = activeUnits.contains(normalizedSelected) ? normalizedSelected : activeUnits.first;
 
     return Container(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 14,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
       decoration: BoxDecoration(
         color: cardBg,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
       ),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top Drag Handle Indicator
+            // Top Drag Handle & Title Bar
             Center(
               child: Container(
-                width: 44,
+                width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: handleColor,
+                  color: isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
 
-            // Header Item Info with Close Button
+            // Item Name & Category Subtitle
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ItemIconWidget(
-                  itemId: widget.catalogItem.id,
-                  category: widget.catalogItem.category,
-                  emojiHint: widget.catalogItem.iconEmoji,
-                  size: 60,
-                  iconSize: 30,
-                ),
-                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -149,37 +171,38 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
                       Text(
                         cleanTitle,
                         style: TextStyle(
-                          fontSize: 21,
+                          fontSize: 22,
                           fontWeight: FontWeight.bold,
                           color: textColor,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        widget.catalogItem.category,
-                        style: const TextStyle(
-                          color: Color(0xFF00C853),
+                        categoryLabel,
+                        style: TextStyle(
                           fontSize: 14,
-                          fontWeight: FontWeight.bold,
+                          color: subtextColor,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.close, color: hintColor),
+                  icon: Icon(Icons.close, color: subtextColor),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
             ),
             const SizedBox(height: 16),
 
-            if (widget.capturedPhotoPath != null) ...[
+            // Optional Captured Image Preview
+            if (widget.capturedPhotoPath != null && File(widget.capturedPhotoPath!).existsSync()) ...[
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Image.file(
                   File(widget.capturedPhotoPath!),
-                  height: 120,
+                  height: 140,
                   width: double.infinity,
                   fit: BoxFit.cover,
                 ),
@@ -187,9 +210,9 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
               const SizedBox(height: 16),
             ],
 
-            // Item Name Field
+            // Item Display Name Input Field
             Text(
-              'Item Name',
+              isHindi ? 'सामान का नाम' : 'Item Name',
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
@@ -214,17 +237,18 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
             ),
             const SizedBox(height: 16),
 
-            // Quantity Stepper & Unit side by side
+            // Quantity & Unit Input Row
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Quantity Stepper & Input
                 Expanded(
                   flex: 3,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Quantity',
+                        isHindi ? 'मात्रा' : 'Quantity',
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
@@ -233,60 +257,45 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
                       ),
                       const SizedBox(height: 6),
                       Container(
-                        height: 48,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: borderColor),
                         ),
                         child: Row(
                           children: [
-                            InkWell(
-                              onTap: () {
-                                final val = double.tryParse(_quantityController.text) ?? 1.0;
-                                if (val > 1) {
-                                  final newVal = val - 1;
-                                  _quantityController.text =
-                                      newVal % 1 == 0 ? newVal.toInt().toString() : newVal.toString();
-                                  setState(() {});
+                            IconButton(
+                              icon: const Icon(Icons.remove, size: 20),
+                              onPressed: () {
+                                final current = double.tryParse(_quantityController.text) ?? 1.0;
+                                if (current > 1) {
+                                  final next = current - 1;
+                                  _quantityController.text = next % 1 == 0 ? next.toInt().toString() : next.toString();
                                 }
                               },
-                              borderRadius: const BorderRadius.horizontal(left: Radius.circular(8)),
-                              child: Container(
-                                width: 38,
-                                height: double.infinity,
-                                alignment: Alignment.center,
-                                child: Icon(Icons.remove, color: textColor, size: 18),
-                              ),
                             ),
                             Expanded(
                               child: TextField(
                                 controller: _quantityController,
                                 textAlign: TextAlign.center,
-                                style: TextStyle(
-                                    color: textColor, fontSize: 16, fontWeight: FontWeight.bold),
                                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                style: TextStyle(
+                                  color: textColor,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
                                 decoration: const InputDecoration(
                                   border: InputBorder.none,
                                   isDense: true,
-                                  contentPadding: EdgeInsets.zero,
                                 ),
                               ),
                             ),
-                            InkWell(
-                              onTap: () {
-                                final val = double.tryParse(_quantityController.text) ?? 1.0;
-                                final newVal = val + 1;
-                                _quantityController.text =
-                                    newVal % 1 == 0 ? newVal.toInt().toString() : newVal.toString();
-                                setState(() {});
+                            IconButton(
+                              icon: const Icon(Icons.add, size: 20),
+                              onPressed: () {
+                                final current = double.tryParse(_quantityController.text) ?? 1.0;
+                                final next = current + 1;
+                                _quantityController.text = next % 1 == 0 ? next.toInt().toString() : next.toString();
                               },
-                              borderRadius: const BorderRadius.horizontal(right: Radius.circular(8)),
-                              child: Container(
-                                width: 38,
-                                height: double.infinity,
-                                alignment: Alignment.center,
-                                child: Icon(Icons.add, color: textColor, size: 18),
-                              ),
                             ),
                           ],
                         ),
@@ -295,13 +304,14 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
                   ),
                 ),
                 const SizedBox(width: 14),
+                // Unit Dropdown Selector
                 Expanded(
                   flex: 2,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Unit',
+                        isHindi ? 'इकाई' : 'Unit',
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
@@ -311,7 +321,7 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
                       const SizedBox(height: 6),
                       DropdownButtonFormField<String>(
                         dropdownColor: cardBg,
-                        initialValue: _selectedUnit.toUpperCase(),
+                        initialValue: safeUnitValue,
                         style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.w600),
                         decoration: InputDecoration(
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -324,14 +334,19 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
                             borderSide: BorderSide(color: borderColor),
                           ),
                         ),
-                        items: ['KG', 'G', 'L', 'ML', 'PCS', 'PKT'].map((u) {
+                        items: activeUnits.map((u) {
+                          final uLabel = LocalizationService.getUnitLabel(u.toLowerCase(), widget.language);
                           return DropdownMenuItem(
                             value: u,
-                            child: Text(u, style: TextStyle(fontWeight: FontWeight.w600, color: textColor)),
+                            child: Text(uLabel, style: TextStyle(fontWeight: FontWeight.w600, color: textColor)),
                           );
                         }).toList(),
                         onChanged: (val) {
-                          if (val != null) setState(() => _selectedUnit = val.toLowerCase());
+                          if (val != null) {
+                            setState(() {
+                              _selectedUnit = LocalizationService.normalizeUnit(val.toLowerCase());
+                            });
+                          }
                         },
                       ),
                     ],
@@ -341,9 +356,9 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
             ),
             const SizedBox(height: 16),
 
-            // Estimated Prize (Optional) Field with Rs Suffix
+            // Estimated Price Field
             Text(
-              'Estimated Prize (Optional)',
+              isHindi ? 'अनुमानित कीमत (वैकल्पिक)' : 'Estimated Price (Optional)',
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
@@ -354,9 +369,9 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
             TextField(
               controller: _priceController,
               style: TextStyle(color: textColor, fontSize: 16),
-              keyboardType: TextInputType.number,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
               decoration: InputDecoration(
-                hintText: 'eg. 120',
+                hintText: isHindi ? 'उदा. 120' : 'e.g. 120',
                 hintStyle: TextStyle(color: hintColor),
                 suffixIcon: Padding(
                   padding: const EdgeInsets.only(right: 14),
@@ -365,7 +380,7 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'Rs',
+                        isHindi ? 'रु' : 'Rs',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -388,7 +403,7 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
             ),
             const SizedBox(height: 24),
 
-            // Save to Inventory Button
+            // Save / Update Button
             SizedBox(
               width: double.infinity,
               height: 52,
@@ -403,7 +418,9 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
                 ),
                 onPressed: _handleSave,
                 child: Text(
-                  widget.existingItem != null ? 'Update Inventory Item' : 'Save to Inventory',
+                  widget.existingItem != null
+                      ? (isHindi ? 'सामान अपडेट करें' : 'Update Inventory Item')
+                      : (isHindi ? 'सूची में सहेजें' : 'Save to Inventory'),
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
@@ -428,16 +445,16 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
                     showDialog(
                       context: context,
                       builder: (ctx) => AlertDialog(
-                        title: Text(widget.language == AppLanguage.hindi ? 'आइटम हटाएं?' : 'Delete Item?'),
+                        title: Text(isHindi ? 'आइटम हटाएं?' : 'Delete Item?'),
                         content: Text(
-                          widget.language == AppLanguage.hindi
+                          isHindi
                               ? 'क्या आप इसे लिस्ट से हटाना चाहते हैं?'
                               : 'Are you sure you want to remove this item from your inventory?',
                         ),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(ctx),
-                            child: Text(widget.language == AppLanguage.hindi ? 'रद्द करें' : 'Cancel'),
+                            child: Text(isHindi ? 'रद्द करें' : 'Cancel'),
                           ),
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(
@@ -448,7 +465,7 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
                               Navigator.pop(ctx);
                               widget.onDelete!();
                             },
-                            child: Text(widget.language == AppLanguage.hindi ? 'हटाएं' : 'Delete'),
+                            child: Text(isHindi ? 'हटाएं' : 'Delete'),
                           ),
                         ],
                       ),
@@ -456,7 +473,7 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
                   },
                   icon: const Icon(Icons.delete_outline, size: 20),
                   label: Text(
-                    widget.language == AppLanguage.hindi ? 'आइटम हटाएं' : 'Delete Item',
+                    isHindi ? 'आइटम हटाएं' : 'Delete Item',
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                 ),

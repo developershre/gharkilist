@@ -66,17 +66,28 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
   @override
   void didUpdateWidget(covariant InventoryHomeView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.items != widget.items || oldWidget.activeList.id != widget.activeList.id) {
+    if (oldWidget.items != widget.items ||
+        oldWidget.activeList.id != widget.activeList.id ||
+        oldWidget.language != widget.language) {
       _localItems = List.from(widget.items);
+      _applySortOption(_selectedSortOption);
     }
   }
 
   void _applySortOption(String sortOpt) {
     _selectedSortOption = sortOpt;
     if (sortOpt == 'A - Z') {
-      _localItems.sort((a, b) => a.customName.toLowerCase().compareTo(b.customName.toLowerCase()));
+      _localItems.sort((a, b) {
+        final nameA = LocalizationService.getItemName(a.customName, a.nameHi, widget.language).toLowerCase();
+        final nameB = LocalizationService.getItemName(b.customName, b.nameHi, widget.language).toLowerCase();
+        return nameA.compareTo(nameB);
+      });
     } else if (sortOpt == 'Z - A') {
-      _localItems.sort((a, b) => b.customName.toLowerCase().compareTo(a.customName.toLowerCase()));
+      _localItems.sort((a, b) {
+        final nameA = LocalizationService.getItemName(a.customName, a.nameHi, widget.language).toLowerCase();
+        final nameB = LocalizationService.getItemName(b.customName, b.nameHi, widget.language).toLowerCase();
+        return nameB.compareTo(nameA);
+      });
     } else if (sortOpt == 'Qty: Low → High') {
       _localItems.sort((a, b) => a.quantity.compareTo(b.quantity));
     } else if (sortOpt == 'Qty: High → Low') {
@@ -128,6 +139,7 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
         categoryFilter: _selectedCategoryFilter,
         stockFilter: _selectedStockFilter,
         sortOption: _selectedSortOption,
+        language: widget.language,
         onApply: (cat, stock, sort) {
           setState(() {
             _selectedCategoryFilter = cat;
@@ -184,6 +196,11 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
   }
 
   void _showEditQuantityDialog(InventoryItem item) {
+    final isHindi = widget.language == AppLanguage.hindi;
+    final displayName = item.catalogItem != null
+        ? LocalizationService.getItemName(item.catalogItem!.nameEn, item.catalogItem!.nameHi, widget.language)
+        : LocalizationService.getItemName(item.customName, item.nameHi, widget.language);
+
     final controller = TextEditingController(
       text: item.quantity % 1 == 0 ? item.quantity.toInt().toString() : item.quantity.toString(),
     );
@@ -191,7 +208,7 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          title: Text('Quantity for ${item.customName}'),
+          title: Text(isHindi ? '$displayName की मात्रा' : 'Quantity for $displayName'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -201,8 +218,8 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                 autofocus: true,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(
-                  labelText: 'Enter Quantity',
-                  suffixText: item.unit.toUpperCase(),
+                  labelText: isHindi ? 'मात्रा दर्ज करें' : 'Enter Quantity',
+                  suffixText: LocalizationService.getUnitLabel(item.unit, widget.language).toUpperCase(),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                 ),
               ),
@@ -211,7 +228,7 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
+              child: Text(isHindi ? 'रद्द करें' : 'Cancel'),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -227,7 +244,7 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                 }
                 if (ctx.mounted) Navigator.pop(ctx);
               },
-              child: const Text('Save'),
+              child: Text(isHindi ? 'सहेजें' : 'Save'),
             ),
           ],
         );
@@ -237,19 +254,24 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
 
   void _deleteItem(InventoryItem item) async {
     if (item.id == null) return;
+    final isHindi = widget.language == AppLanguage.hindi;
+    final displayName = item.catalogItem != null
+        ? LocalizationService.getItemName(item.catalogItem!.nameEn, item.catalogItem!.nameHi, widget.language)
+        : LocalizationService.getItemName(item.customName, item.nameHi, widget.language);
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(widget.language == AppLanguage.hindi ? 'आइटम हटाएं?' : 'Delete Item?'),
+        title: Text(isHindi ? 'आइटम हटाएं?' : 'Delete Item?'),
         content: Text(
-          widget.language == AppLanguage.hindi
-              ? 'क्या आप "${item.customName}" को लिस्ट से हटाना चाहते हैं?'
-              : 'Are you sure you want to remove "${item.customName}" from your inventory?',
+          isHindi
+              ? 'क्या आप "$displayName" को लिस्ट से हटाना चाहते हैं?'
+              : 'Are you sure you want to remove "$displayName" from your inventory?',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text(widget.language == AppLanguage.hindi ? 'रद्द करें' : 'Cancel'),
+            child: Text(isHindi ? 'रद्द करें' : 'Cancel'),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -265,12 +287,12 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                      widget.language == AppLanguage.hindi
-                          ? '"${deletedItem.customName}" हटा दिया गया'
-                          : '"${deletedItem.customName}" deleted',
+                      isHindi
+                          ? '"$displayName" हटा दिया गया'
+                          : '"$displayName" deleted',
                     ),
                     action: SnackBarAction(
-                      label: widget.language == AppLanguage.hindi ? 'वापस लाएं' : 'Undo',
+                      label: isHindi ? 'वापस लाएं' : 'Undo',
                       onPressed: () async {
                         await DatabaseHelper.instance.addInventoryItem(deletedItem);
                         widget.onRefresh();
@@ -280,7 +302,7 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                 );
               }
             },
-            child: Text(widget.language == AppLanguage.hindi ? 'हटाएं' : 'Delete'),
+            child: Text(isHindi ? 'हटाएं' : 'Delete'),
           ),
         ],
       ),
@@ -317,6 +339,8 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => AddItemOptionsSheet(
+        listName: widget.activeList.name,
+        language: widget.language,
         onScanTap: widget.onAddScanTap,
         onAddFormTap: () {
           Navigator.push(
@@ -324,6 +348,7 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
             MaterialPageRoute(
               builder: (context) => AddItemFormView(
                 inventoryId: widget.activeList.id ?? 1,
+                language: widget.language,
                 onItemAdded: widget.onRefresh,
               ),
             ),
@@ -337,6 +362,7 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isHindi = widget.language == AppLanguage.hindi;
     final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
     final subtextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
     final displayItems = _filteredItems;
@@ -351,12 +377,14 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
             onChanged: (val) => setState(() => _searchQuery = val),
             onFilterTap: _showFilterSheet,
             hasActiveFilters: _hasActiveFilters,
+            language: widget.language,
           ),
 
           // Tag Pills Bar
           InventoryTagBar(
             allLists: widget.allLists,
             activeList: widget.activeList,
+            language: widget.language,
             onListSelected: widget.onListChanged,
             onCreateNewTap: _showCreateListDialog,
           ),
@@ -378,7 +406,7 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                   children: [
                     Flexible(
                       child: Text(
-                        '${displayItems.length} items',
+                        isHindi ? '${displayItems.length} सामान' : '${displayItems.length} items',
                         style: TextStyle(color: subtextColor, fontWeight: FontWeight.w600, fontSize: 13),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -386,7 +414,7 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                     const SizedBox(width: 8),
                     Flexible(
                       child: Text(
-                        'Est. Budget: ₹${_totalEstBudget.toInt()}',
+                        isHindi ? 'अनुमानित बजट: ₹${_totalEstBudget.toInt()}' : 'Est. Budget: ₹${_totalEstBudget.toInt()}',
                         style: const TextStyle(
                           color: Color(0xFF00C853),
                           fontWeight: FontWeight.bold,
@@ -417,6 +445,10 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                     onReorderItem: _onReorderItems,
                     itemBuilder: (context, index) {
                       final item = displayItems[index];
+                      final displayName = item.catalogItem != null
+                          ? LocalizationService.getItemName(item.catalogItem!.nameEn, item.catalogItem!.nameHi, widget.language)
+                          : LocalizationService.getItemName(item.customName, item.nameHi, widget.language);
+
                       return Dismissible(
                         key: ValueKey('dismiss_${item.id ?? item.catalogId}_$index'),
                         direction: DismissDirection.endToStart,
@@ -428,14 +460,14 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                             color: const Color(0xFFEF4444),
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.delete_outline, color: Colors.white, size: 24),
-                              SizedBox(width: 6),
+                              const Icon(Icons.delete_outline, color: Colors.white, size: 24),
+                              const SizedBox(width: 6),
                               Text(
-                                'Delete',
-                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                                isHindi ? 'हटाएं' : 'Delete',
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
                               ),
                             ],
                           ),
@@ -444,16 +476,16 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                           return await showDialog<bool>(
                             context: context,
                             builder: (ctx) => AlertDialog(
-                              title: Text(widget.language == AppLanguage.hindi ? 'आइटम हटाएं?' : 'Delete Item?'),
+                              title: Text(isHindi ? 'आइटम हटाएं?' : 'Delete Item?'),
                               content: Text(
-                                widget.language == AppLanguage.hindi
-                                    ? 'क्या आप "${item.customName}" को लिस्ट से हटाना चाहते हैं?'
-                                    : 'Are you sure you want to remove "${item.customName}" from your inventory?',
+                                isHindi
+                                    ? 'क्या आप "$displayName" को लिस्ट से हटाना चाहते हैं?'
+                                    : 'Are you sure you want to remove "$displayName" from your inventory?',
                               ),
                               actions: [
                                 TextButton(
                                   onPressed: () => Navigator.pop(ctx, false),
-                                  child: Text(widget.language == AppLanguage.hindi ? 'रद्द करें' : 'Cancel'),
+                                  child: Text(isHindi ? 'रद्द करें' : 'Cancel'),
                                 ),
                                 ElevatedButton(
                                   style: ElevatedButton.styleFrom(
@@ -461,7 +493,7 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                                     foregroundColor: Colors.white,
                                   ),
                                   onPressed: () => Navigator.pop(ctx, true),
-                                  child: Text(widget.language == AppLanguage.hindi ? 'हटाएं' : 'Delete'),
+                                  child: Text(isHindi ? 'हटाएं' : 'Delete'),
                                 ),
                               ],
                             ),
@@ -476,12 +508,12 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(
-                                    widget.language == AppLanguage.hindi
-                                        ? '"${deletedItem.customName}" हटा दिया गया'
-                                        : '"${deletedItem.customName}" deleted',
+                                    isHindi
+                                        ? '"$displayName" हटा दिया गया'
+                                        : '"$displayName" deleted',
                                   ),
                                   action: SnackBarAction(
-                                    label: widget.language == AppLanguage.hindi ? 'वापस लाएं' : 'Undo',
+                                    label: isHindi ? 'वापस लाएं' : 'Undo',
                                     onPressed: () async {
                                       await DatabaseHelper.instance.addInventoryItem(deletedItem);
                                       widget.onRefresh();
@@ -496,6 +528,7 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                           key: ValueKey(item.id ?? item.catalogId),
                           index: index,
                           item: item,
+                          language: widget.language,
                           onTap: () => _editItem(item),
                           onQuantityChanged: (newQty) async {
                             if (item.id != null) {
@@ -528,19 +561,24 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                   child: ShadButton(
                     height: 52,
                     backgroundColor: const Color(0xFF00C853),
-                    onPressed: () => ShareService.shareToWhatsApp(
-                      widget.items,
-                      listName: widget.activeList.name,
-                      language: widget.language,
-                    ),
-                    child: const Row(
+                    onPressed: () async {
+                      final activeListItems = widget.activeList.id != null
+                          ? await DatabaseHelper.instance.getInventoryItemsForList(widget.activeList.id!)
+                          : _localItems;
+                      ShareService.shareToWhatsApp(
+                        activeListItems.isNotEmpty ? activeListItems : _localItems,
+                        listName: widget.activeList.name,
+                        language: widget.language,
+                      );
+                    },
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.share, color: Colors.white, size: 22),
-                        SizedBox(width: 8),
+                        const Icon(Icons.share, color: Colors.white, size: 22),
+                        const SizedBox(width: 8),
                         Text(
-                          "Share On What's App",
-                          style: TextStyle(
+                          isHindi ? "WhatsApp पर शेयर करें" : "Share On WhatsApp",
+                          style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
                             color: Colors.white,

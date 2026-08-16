@@ -3,16 +3,19 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import '../models/inventory_item.dart';
+import '../services/localization_service.dart';
 import 'add_item_form_view.dart';
 
 class ScanCaptureView extends StatefulWidget {
   final int inventoryId;
+  final AppLanguage language;
   final Function(InventoryItem item)? onItemAdded;
   final VoidCallback? onRefresh;
 
   const ScanCaptureView({
     super.key,
     this.inventoryId = 1,
+    this.language = AppLanguage.english,
     this.onItemAdded,
     this.onRefresh,
   });
@@ -69,6 +72,7 @@ class _ScanCaptureViewState extends State<ScanCaptureView> {
       MaterialPageRoute(
         builder: (context) => AddItemFormView(
           inventoryId: widget.inventoryId,
+          language: widget.language,
           initialPhotoPath: photoPath,
           onItemAdded: () {
             widget.onRefresh?.call();
@@ -82,6 +86,7 @@ class _ScanCaptureViewState extends State<ScanCaptureView> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final isHindi = widget.language == AppLanguage.hindi;
 
     final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
     final cardBgColor = isDark ? const Color(0xFF1E293B) : Colors.white;
@@ -92,7 +97,10 @@ class _ScanCaptureViewState extends State<ScanCaptureView> {
       appBar: AppBar(
         backgroundColor: bgColor,
         elevation: 0,
-        title: const Text('Camera Scan (फोटो खींचें)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        title: Text(
+          isHindi ? 'कैमरा स्कैन' : 'Camera Scan',
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -131,7 +139,7 @@ class _ScanCaptureViewState extends State<ScanCaptureView> {
                           ),
                           const SizedBox(height: 24),
                           Text(
-                            'Scan Item Photo',
+                            isHindi ? 'सामान की फोटो लें' : 'Scan Item Photo',
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -139,12 +147,14 @@ class _ScanCaptureViewState extends State<ScanCaptureView> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 24.0),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24.0),
                             child: Text(
-                              'Take a photo of any grocery packet or Kirana bag to save it in your inventory!',
+                              isHindi
+                                  ? 'सामान या किराना थैले की फोटो खींचकर अपनी सूची में सहेजें!'
+                                  : 'Take a photo of any grocery packet or Kirana bag to save it in your inventory!',
                               textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 14, color: Colors.grey),
+                              style: const TextStyle(fontSize: 14, color: Colors.grey),
                             ),
                           ),
                         ],
@@ -153,11 +163,14 @@ class _ScanCaptureViewState extends State<ScanCaptureView> {
             ),
             const SizedBox(height: 24),
             if (_isProcessing)
-              const Column(
+              Column(
                 children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 12),
-                  Text('Processing image...', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 12),
+                  Text(
+                    isHindi ? 'चित्र प्रोसेस हो रहा है...' : 'Processing image...',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ],
               )
             else
@@ -168,12 +181,15 @@ class _ScanCaptureViewState extends State<ScanCaptureView> {
                       height: 52,
                       child: ShadButton.outline(
                         onPressed: _pickFromGallery,
-                        child: const Row(
+                        child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.photo_library, size: 20),
-                            SizedBox(width: 8),
-                            Text('Gallery', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                            const Icon(Icons.photo_library, size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              isHindi ? 'गैलरी' : 'Gallery',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                            ),
                           ],
                         ),
                       ),
@@ -190,7 +206,10 @@ class _ScanCaptureViewState extends State<ScanCaptureView> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),
                         icon: const Icon(Icons.camera_alt, size: 22),
-                        label: const Text('Take Photo', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                        label: Text(
+                          isHindi ? 'फोटो खींचें' : 'Take Photo',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                        ),
                         onPressed: _takePhoto,
                       ),
                     ),

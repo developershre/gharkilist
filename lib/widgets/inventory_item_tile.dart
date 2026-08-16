@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import '../models/inventory_item.dart';
+import '../services/localization_service.dart';
 import 'item_icon_widget.dart';
 
 class InventoryItemTile extends StatelessWidget {
   final int index;
   final InventoryItem item;
+  final AppLanguage language;
   final VoidCallback onTap;
   final ValueChanged<double> onQuantityChanged;
   final VoidCallback onQuantityTap;
@@ -15,6 +17,7 @@ class InventoryItemTile extends StatelessWidget {
     super.key,
     required this.index,
     required this.item,
+    this.language = AppLanguage.english,
     required this.onTap,
     required this.onQuantityChanged,
     required this.onQuantityTap,
@@ -34,10 +37,22 @@ class InventoryItemTile extends StatelessWidget {
     final primaryGreen = const Color(0xFF008744);
     final deleteRed = const Color(0xFFC62828);
 
+    final displayName = item.catalogItem != null
+        ? LocalizationService.getItemName(
+            item.catalogItem!.nameEn,
+            item.catalogItem!.nameHi,
+            language,
+          )
+        : LocalizationService.getItemName(
+            item.customName,
+            item.nameHi,
+            language,
+          );
+
     final qtyDisplay = item.quantity % 1 == 0
         ? item.quantity.toInt().toString()
         : item.quantity.toString();
-    final unitDisplay = item.unit.toLowerCase();
+    final unitDisplay = LocalizationService.getUnitLabel(item.unit, language);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -92,7 +107,7 @@ class InventoryItemTile extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      item.customName,
+                      displayName,
                       style: TextStyle(
                         fontSize: 19,
                         fontWeight: FontWeight.bold,
@@ -118,18 +133,17 @@ class InventoryItemTile extends StatelessWidget {
                 ),
               ),
 
-              // Right Action Buttons: Green Edit Dropdown Menu & Red Delete
+              // Right Action Buttons: Green Edit & Red Delete
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Edit Button (opens bottom popup container)
                   IconButton(
                     icon: Icon(
                       Icons.edit_square,
                       color: primaryGreen,
                       size: 26,
                     ),
-                    tooltip: 'Edit Item',
+                    tooltip: language == AppLanguage.hindi ? 'संपादित करें' : 'Edit Item',
                     padding: const EdgeInsets.all(6),
                     constraints: const BoxConstraints(),
                     onPressed: onTap,
@@ -137,14 +151,13 @@ class InventoryItemTile extends StatelessWidget {
 
                   const SizedBox(width: 6),
 
-                  // Delete Trash Icon Button
                   IconButton(
                     icon: Icon(
                       Icons.delete_outline,
                       color: deleteRed,
                       size: 26,
                     ),
-                    tooltip: 'Delete Item',
+                    tooltip: language == AppLanguage.hindi ? 'हटाएं' : 'Delete Item',
                     padding: const EdgeInsets.all(6),
                     constraints: const BoxConstraints(),
                     onPressed: onDeleteTap,
@@ -158,4 +171,3 @@ class InventoryItemTile extends StatelessWidget {
     );
   }
 }
-

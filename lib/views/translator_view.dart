@@ -3,13 +3,16 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import '../data/indian_pantry_catalog.dart';
 import '../models/catalog_item.dart';
 import '../models/inventory_item.dart';
+import '../services/localization_service.dart';
 import '../widgets/item_icon_widget.dart';
 
 class TranslatorView extends StatefulWidget {
+  final AppLanguage language;
   final Function(InventoryItem item) onItemAdded;
 
   const TranslatorView({
     super.key,
+    this.language = AppLanguage.english,
     required this.onItemAdded,
   });
 
@@ -45,6 +48,7 @@ class _TranslatorViewState extends State<TranslatorView> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final isHindi = widget.language == AppLanguage.hindi;
 
     final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
     final cardBgColor = isDark ? const Color(0xFF1E293B) : Colors.white;
@@ -55,7 +59,10 @@ class _TranslatorViewState extends State<TranslatorView> {
       appBar: AppBar(
         backgroundColor: bgColor,
         elevation: 0,
-        title: const Text('Translator (हिंदी / English)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        title: Text(
+          isHindi ? 'अनुवादक' : 'Translator',
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -69,14 +76,16 @@ class _TranslatorViewState extends State<TranslatorView> {
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.3)),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.g_translate, color: Color(0xFF0284C7), size: 28),
-                  SizedBox(width: 12),
+                  const Icon(Icons.g_translate, color: Color(0xFF0284C7), size: 28),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Type any English or Hindi name (e.g. "Atta", "गेहूं", "Toor Dal", "हल्दी") to translate instantly!',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                      isHindi
+                          ? 'अंग्रेजी या हिंदी नाम (जैसे "Atta", "गेहूं", "Toor Dal", "हल्दी") लिखकर तुरंत अनुवाद करें!'
+                          : 'Type any English or Hindi name (e.g. "Atta", "gehu", "Toor Dal", "haldi") to translate instantly!',
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
@@ -85,7 +94,9 @@ class _TranslatorViewState extends State<TranslatorView> {
             const SizedBox(height: 16),
             ShadInput(
               controller: _inputController,
-              placeholder: const Text('Type item name in English or हिंदी...'),
+              placeholder: Text(
+                isHindi ? 'अंग्रेजी या हिंदी में नाम लिखें...' : 'Type item name...',
+              ),
               leading: const Icon(Icons.search, size: 20),
               onChanged: _translateInput,
             ),
@@ -95,8 +106,12 @@ class _TranslatorViewState extends State<TranslatorView> {
                   ? Center(
                       child: Text(
                         _inputController.text.isEmpty
-                            ? 'Start typing above to translate item names.'
-                            : 'No translation found for "${_inputController.text}".',
+                            ? (isHindi
+                                ? 'सामान का नाम खोजें...'
+                                : 'Start typing above to translate item names.')
+                            : (isHindi
+                                ? '"${_inputController.text}" के लिए कोई अनुवाद नहीं मिला।'
+                                : 'No translation found for "${_inputController.text}".'),
                         style: const TextStyle(fontSize: 15, color: Colors.grey),
                       ),
                     )
@@ -105,6 +120,22 @@ class _TranslatorViewState extends State<TranslatorView> {
                       separatorBuilder: (context, index) => const SizedBox(height: 8),
                       itemBuilder: (context, index) {
                         final item = _searchResults[index];
+                        final nameEnClean = LocalizationService.getItemName(
+                          item.nameEn,
+                          item.nameHi,
+                          AppLanguage.english,
+                        );
+                        final nameHiClean = LocalizationService.getItemName(
+                          item.nameEn,
+                          item.nameHi,
+                          AppLanguage.hindi,
+                        );
+                        final categoryDisplay = LocalizationService.getCategoryName(
+                          item.category,
+                          widget.language,
+                          categoryHi: item.categoryHi,
+                        );
+
                         return Card(
                           elevation: 0,
                           color: cardBgColor,
@@ -125,31 +156,32 @@ class _TranslatorViewState extends State<TranslatorView> {
                               children: [
                                 Flexible(
                                   child: Text(
-                                    item.nameEn,
+                                    nameEnClean,
                                     style: TextStyle(
-                                      fontSize: 17,
+                                      fontSize: 16,
                                       fontWeight: FontWeight.bold,
                                       color: isDark ? Colors.white : const Color(0xFF0F172A),
                                     ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                                const SizedBox(width: 8),
-                                const Icon(Icons.compare_arrows, size: 18, color: Colors.grey),
-                                const SizedBox(width: 8),
+                                const SizedBox(width: 6),
+                                const Icon(Icons.compare_arrows, size: 16, color: Colors.grey),
+                                const SizedBox(width: 6),
                                 Expanded(
                                   child: Text(
-                                    item.nameHi,
+                                    nameHiClean,
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
                                       color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7),
                                     ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               ],
                             ),
-                            subtitle: Text('Category: ${item.category}', style: const TextStyle(fontSize: 13, color: Colors.grey)),
+                            subtitle: Text(categoryDisplay, style: const TextStyle(fontSize: 13, color: Colors.grey)),
                             trailing: ElevatedButton(
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0F172A),
@@ -169,7 +201,10 @@ class _TranslatorViewState extends State<TranslatorView> {
                                 widget.onItemAdded(inv);
                                 Navigator.pop(context);
                               },
-                              child: const Text('Add Item', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                              child: Text(
+                                isHindi ? 'सामान जोड़ें' : 'Add Item',
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                              ),
                             ),
                           ),
                         );

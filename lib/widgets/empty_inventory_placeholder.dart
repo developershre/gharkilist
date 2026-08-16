@@ -18,6 +18,7 @@ class EmptyInventoryPlaceholder extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? Colors.white : const Color(0xFF000000);
     final subtextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final displayListName = LocalizationService.getListName(listName, language);
 
     return Center(
       child: Padding(
@@ -39,7 +40,9 @@ class EmptyInventoryPlaceholder extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'No items in "$listName"',
+              language == AppLanguage.hindi
+                  ? '"$displayListName" में कोई सामान नहीं है'
+                  : 'No items in "$displayListName"',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,

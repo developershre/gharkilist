@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
+import '../services/localization_service.dart';
 
 class AddItemOptionsSheet extends StatelessWidget {
+  final String listName;
+  final AppLanguage language;
   final VoidCallback onScanTap;
   final VoidCallback onAddFormTap;
   final VoidCallback onBrowseTap;
 
   const AddItemOptionsSheet({
     super.key,
+    this.listName = '',
+    this.language = AppLanguage.english,
     required this.onScanTap,
     required this.onAddFormTap,
     required this.onBrowseTap,
@@ -15,10 +20,19 @@ class AddItemOptionsSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isHindi = language == AppLanguage.hindi;
     final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
     final textColor = isDark ? Colors.white : const Color(0xFF000000);
     final subtextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
     final dividerColor = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+
+    final displayListName = listName.isNotEmpty
+        ? LocalizationService.getListName(listName, language)
+        : (isHindi ? 'सूची' : 'List');
+
+    final headerText = isHindi
+        ? '$displayListName में सामान जोड़ें'
+        : 'Add Item to $displayListName';
 
     return Container(
       decoration: BoxDecoration(
@@ -31,7 +45,7 @@ class AddItemOptionsSheet extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Add Item to Kitchen',
+            headerText,
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
@@ -41,8 +55,10 @@ class AddItemOptionsSheet extends StatelessWidget {
           const SizedBox(height: 24),
           _OptionRow(
             icon: Icons.camera_alt_outlined,
-            title: 'Scan Photo',
-            subtitle: 'Take or scan images of the product',
+            title: isHindi ? 'फोटो स्कैन करें' : 'Scan Photo',
+            subtitle: isHindi
+                ? 'सामान की फोटो खींचें या स्कैन करें'
+                : 'Take or scan images of the product',
             textColor: textColor,
             subtextColor: subtextColor,
             onTap: () {
@@ -55,8 +71,10 @@ class AddItemOptionsSheet extends StatelessWidget {
           const SizedBox(height: 18),
           _OptionRow(
             icon: Icons.edit_note,
-            title: 'Add Item Form',
-            subtitle: 'Fill form manually with optional photo',
+            title: isHindi ? 'फॉर्म भरें' : 'Add Item Form',
+            subtitle: isHindi
+                ? 'मैन्युअल रूप से विवरण भरें'
+                : 'Fill form manually with optional photo',
             textColor: textColor,
             subtextColor: subtextColor,
             onTap: () {
@@ -69,8 +87,10 @@ class AddItemOptionsSheet extends StatelessWidget {
           const SizedBox(height: 18),
           _OptionRow(
             icon: Icons.search,
-            title: 'Browse Collection',
-            subtitle: 'Browse our collection of 400+ products',
+            title: isHindi ? 'कलेक्शन देखें' : 'Browse Collection',
+            subtitle: isHindi
+                ? '200+ सामान की सूची में से चुनें'
+                : 'Browse our collection of 200+ products',
             textColor: textColor,
             subtextColor: subtextColor,
             onTap: () {

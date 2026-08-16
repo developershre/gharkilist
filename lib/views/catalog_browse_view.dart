@@ -45,6 +45,14 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(covariant CatalogBrowseView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.language != widget.language) {
+      setState(() {});
+    }
+  }
+
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     final items = await DatabaseHelper.instance.getAllCatalogItems();
@@ -93,6 +101,7 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isHindi = widget.language == AppLanguage.hindi;
     final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
     final appBarBg = isDark ? const Color(0xFF0F172A) : Colors.white;
     final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
@@ -111,7 +120,7 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
           onPressed: () => Navigator.pop(context),
         ),
         titleSpacing: 0,
-        title: const GharkiListLogoWidget(),
+        title: GharkiListLogoWidget(language: widget.language),
         actions: [
           IconButton(
             icon: Icon(Icons.settings_outlined, color: iconColor, size: 26),
@@ -143,7 +152,7 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
                       style: TextStyle(color: textColor, fontSize: 16),
                       onChanged: _onSearchChanged,
                       decoration: InputDecoration(
-                        hintText: 'Search',
+                        hintText: isHindi ? 'सामान खोजें' : 'Search',
                         hintStyle: TextStyle(color: subtextColor, fontSize: 16),
                         border: InputBorder.none,
                         isDense: true,
@@ -164,8 +173,9 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: _categories.length,
               itemBuilder: (context, index) {
-                final cat = _categories[index];
-                final isSelected = cat == _selectedCategory;
+                final catKey = _categories[index];
+                final catLabel = LocalizationService.getCategoryName(catKey, widget.language);
+                final isSelected = catKey == _selectedCategory;
 
                 if (isSelected) {
                   return Padding(
@@ -177,7 +187,7 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        cat,
+                        catLabel,
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -193,14 +203,14 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
                   child: InkWell(
                     onTap: () {
                       setState(() {
-                        _selectedCategory = cat;
+                        _selectedCategory = catKey;
                       });
                       _onSearchChanged(_searchController.text);
                     },
                     child: Container(
                       alignment: Alignment.center,
                       child: Text(
-                        cat,
+                        catLabel,
                         style: TextStyle(
                           color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF1E293B),
                           fontWeight: FontWeight.w600,
@@ -222,7 +232,7 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
                 : _catalogItems.isEmpty
                     ? Center(
                         child: Text(
-                          'No items found matching search.',
+                          isHindi ? 'खोज के अनुसार कोई सामान नहीं मिला।' : 'No items found matching search.',
                           style: TextStyle(fontSize: 15, color: subtextColor),
                         ),
                       )
@@ -231,6 +241,11 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
                         itemCount: _catalogItems.length,
                         itemBuilder: (context, index) {
                           final item = _catalogItems[index];
+                          final displayName = LocalizationService.getItemName(
+                            item.nameEn,
+                            item.nameHi,
+                            widget.language,
+                          );
 
                           return Container(
                             margin: const EdgeInsets.only(bottom: 12),
@@ -251,7 +266,7 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
                                   iconSize: 24,
                                 ),
                                 title: Text(
-                                  item.nameEn.replaceAll(RegExp(r'\s*\([^)]*\)'), ''),
+                                  displayName,
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 18,
@@ -275,4 +290,3 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
     );
   }
 }
-

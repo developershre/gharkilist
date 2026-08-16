@@ -33,6 +33,7 @@ class EmptyStateView extends StatelessWidget {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => AddItemOptionsSheet(
+        language: language,
         onScanTap: onScanTap,
         onAddFormTap: () {},
         onBrowseTap: onBrowseTap,
@@ -52,6 +53,7 @@ class EmptyStateView extends StatelessWidget {
           InventoryTagBar(
             allLists: allLists,
             activeList: activeList,
+            language: language,
             onListSelected: (list) {
               if (onListChanged != null) onListChanged!(list);
             },

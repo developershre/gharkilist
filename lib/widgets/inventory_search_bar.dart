@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import '../services/localization_service.dart';
 
 class InventorySearchBar extends StatelessWidget {
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
   final VoidCallback onFilterTap;
   final bool hasActiveFilters;
+  final AppLanguage language;
 
   const InventorySearchBar({
     super.key,
@@ -12,6 +14,7 @@ class InventorySearchBar extends StatelessWidget {
     required this.onChanged,
     required this.onFilterTap,
     this.hasActiveFilters = false,
+    this.language = AppLanguage.english,
   });
 
   @override
@@ -42,7 +45,7 @@ class InventorySearchBar extends StatelessWidget {
                 style: TextStyle(color: textColor, fontSize: 16),
                 onChanged: onChanged,
                 decoration: InputDecoration(
-                  hintText: 'Search',
+                  hintText: language == AppLanguage.hindi ? 'सामान खोजें' : 'Search',
                   hintStyle: TextStyle(color: subtextColor, fontSize: 16),
                   border: InputBorder.none,
                   isDense: true,

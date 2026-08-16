@@ -49,7 +49,7 @@ class GharkilistAppState extends State<GharkilistApp> {
   @override
   Widget build(BuildContext context) {
     return ShadApp(
-      title: 'gharkilist',
+      title: _language == AppLanguage.hindi ? 'घरकीलिस्ट' : 'gharkilist',
       theme: ShadThemeData(
         brightness: Brightness.light,
         colorScheme: const ShadSlateColorScheme.light(),
@@ -153,11 +153,13 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
   }
 
   void _openScanView() {
+    final appState = GharkilistApp.of(context);
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => ScanCaptureView(
           inventoryId: _activeList?.id ?? 1,
+          language: appState.language,
           onRefresh: _refreshInventory,
           onItemAdded: (item) async {
             final itemWithList = item.copyWith(
@@ -191,10 +193,12 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
   }
 
   void _openTranslatorView() {
+    final appState = GharkilistApp.of(context);
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => TranslatorView(
+          language: appState.language,
           onItemAdded: (item) async {
             final itemWithList = item.copyWith(
               inventoryId: _activeList?.id ?? 1,
@@ -247,7 +251,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
         backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
         elevation: 0,
         titleSpacing: 16,
-        title: const GharkiListLogoWidget(),
+        title: GharkiListLogoWidget(language: language),
         actions: [
           IconButton(
             icon: Icon(
