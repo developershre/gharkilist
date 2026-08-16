@@ -1,19 +1,21 @@
 enum AppLanguage { english, hindi }
 
 class LocalizationService {
+  static final RegExp _parenthesesRegExp = RegExp(r'\s*\([^)]*\)');
+  static final RegExp _hindiRegExp = RegExp(r'[\u0900-\u097F]');
+
   /// Returns clean item name according to active language.
-  /// Removes any secondary/parenthetical text (e.g. "(Atta)", "(Maida)", "(Rice)")
-  /// so that BOTH languages are never rendered at once.
+  /// Uses cached RegExp patterns for maximum string parsing performance.
   static String getItemName(String nameEn, String nameHi, AppLanguage lang) {
     if (lang == AppLanguage.hindi) {
       String cleanHi = nameHi;
       // Strip parenthetical text e.g. "गेहूं का आटा (Atta)" -> "गेहूं का आटा"
-      cleanHi = cleanHi.replaceAll(RegExp(r'\s*\([^)]*\)'), '').trim();
+      cleanHi = cleanHi.replaceAll(_parenthesesRegExp, '').trim();
       // Handle slash cases e.g. "सूजी / Rava" -> "सूजी"
       if (cleanHi.contains('/')) {
         final parts = cleanHi.split('/');
         final hindiPart = parts.firstWhere(
-          (p) => RegExp(r'[\u0900-\u097F]').hasMatch(p),
+          (p) => _hindiRegExp.hasMatch(p),
           orElse: () => parts.first,
         );
         cleanHi = hindiPart.trim();
@@ -23,7 +25,7 @@ class LocalizationService {
 
     String cleanEn = nameEn;
     // Strip parenthetical text e.g. "Wheat Flour (Atta)" -> "Wheat Flour"
-    cleanEn = cleanEn.replaceAll(RegExp(r'\s*\([^)]*\)'), '').trim();
+    cleanEn = cleanEn.replaceAll(_parenthesesRegExp, '').trim();
     // Handle slash cases e.g. "Semolina (Sooji / Rava)" -> "Semolina"
     if (cleanEn.contains('/')) {
       final parts = cleanEn.split('/');
@@ -36,7 +38,7 @@ class LocalizationService {
   static String getCategoryName(String category, AppLanguage lang, {String categoryHi = ''}) {
     if (lang == AppLanguage.hindi) {
       if (categoryHi.isNotEmpty) {
-        return categoryHi.replaceAll(RegExp(r'\s*\([^)]*\)'), '').trim();
+        return categoryHi.replaceAll(_parenthesesRegExp, '').trim();
       }
       switch (category.toLowerCase()) {
         case 'all':

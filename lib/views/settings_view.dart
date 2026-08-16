@@ -1,24 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/inventory_list.dart';
+import '../providers/app_inventory_provider.dart';
+import '../providers/app_settings_provider.dart';
 import '../services/database_helper.dart';
 import '../services/localization_service.dart';
 
 class SettingsView extends StatefulWidget {
   final InventoryList activeList;
-  final ThemeMode themeMode;
-  final AppLanguage language;
-  final Function(ThemeMode mode) onSetThemeMode;
-  final Function(AppLanguage language) onSetLanguage;
   final VoidCallback onOpenTranslator;
   final VoidCallback onListCleared;
 
   const SettingsView({
     super.key,
     required this.activeList,
-    required this.themeMode,
-    required this.language,
-    required this.onSetThemeMode,
-    required this.onSetLanguage,
     required this.onOpenTranslator,
     required this.onListCleared,
   });
@@ -28,7 +23,6 @@ class SettingsView extends StatefulWidget {
 }
 
 class _SettingsViewState extends State<SettingsView> {
-  bool _includePricesInWhatsApp = true;
   int _itemCount = 0;
   bool _isLoading = true;
 
@@ -50,8 +44,8 @@ class _SettingsViewState extends State<SettingsView> {
     }
   }
 
-  void _showClearListConfirmation() {
-    final isHindi = widget.language == AppLanguage.hindi;
+  void _showClearListConfirmation(AppSettingsProvider settings, AppInventoryProvider inventory) {
+    final isHindi = settings.isHindi;
 
     showDialog(
       context: context,
@@ -80,8 +74,7 @@ class _SettingsViewState extends State<SettingsView> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
               onPressed: () async {
-                final db = await DatabaseHelper.instance.database;
-                await db.delete('inventory_items', where: 'inventory_id = ?', whereArgs: [widget.activeList.id]);
+                await inventory.clearActiveList();
                 if (dialogContext.mounted) {
                   Navigator.pop(dialogContext);
                 }
@@ -106,9 +99,12 @@ class _SettingsViewState extends State<SettingsView> {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<AppSettingsProvider>();
+    final inventory = context.watch<AppInventoryProvider>();
+
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final isHindi = widget.language == AppLanguage.hindi;
+    final isHindi = settings.isHindi;
 
     final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
     final cardBgColor = isDark ? const Color(0xFF1E293B) : Colors.white;
@@ -160,8 +156,8 @@ class _SettingsViewState extends State<SettingsView> {
                         Expanded(
                           child: _buildSegmentButton(
                             label: isHindi ? 'सिस्टम' : 'System',
-                            isSelected: widget.themeMode == ThemeMode.system,
-                            onTap: () => widget.onSetThemeMode(ThemeMode.system),
+                            isSelected: settings.themeMode == ThemeMode.system,
+                            onTap: () => settings.setThemeMode(ThemeMode.system),
                             primaryGreen: primaryGreen,
                             subtextColor: subtextColor,
                           ),
@@ -170,8 +166,8 @@ class _SettingsViewState extends State<SettingsView> {
                         Expanded(
                           child: _buildSegmentButton(
                             label: isHindi ? 'लाइट' : 'Light',
-                            isSelected: widget.themeMode == ThemeMode.light,
-                            onTap: () => widget.onSetThemeMode(ThemeMode.light),
+                            isSelected: settings.themeMode == ThemeMode.light,
+                            onTap: () => settings.setThemeMode(ThemeMode.light),
                             primaryGreen: primaryGreen,
                             subtextColor: subtextColor,
                           ),
@@ -180,8 +176,8 @@ class _SettingsViewState extends State<SettingsView> {
                         Expanded(
                           child: _buildSegmentButton(
                             label: isHindi ? 'डार्क' : 'Dark',
-                            isSelected: widget.themeMode == ThemeMode.dark,
-                            onTap: () => widget.onSetThemeMode(ThemeMode.dark),
+                            isSelected: settings.themeMode == ThemeMode.dark,
+                            onTap: () => settings.setThemeMode(ThemeMode.dark),
                             primaryGreen: primaryGreen,
                             subtextColor: subtextColor,
                           ),
@@ -214,8 +210,8 @@ class _SettingsViewState extends State<SettingsView> {
                         Expanded(
                           child: _buildSegmentButton(
                             label: 'English',
-                            isSelected: widget.language == AppLanguage.english,
-                            onTap: () => widget.onSetLanguage(AppLanguage.english),
+                            isSelected: settings.language == AppLanguage.english,
+                            onTap: () => settings.setLanguage(AppLanguage.english),
                             primaryGreen: primaryGreen,
                             subtextColor: subtextColor,
                           ),
@@ -224,8 +220,8 @@ class _SettingsViewState extends State<SettingsView> {
                         Expanded(
                           child: _buildSegmentButton(
                             label: 'हिंदी',
-                            isSelected: widget.language == AppLanguage.hindi,
-                            onTap: () => widget.onSetLanguage(AppLanguage.hindi),
+                            isSelected: settings.language == AppLanguage.hindi,
+                            onTap: () => settings.setLanguage(AppLanguage.hindi),
                             primaryGreen: primaryGreen,
                             subtextColor: subtextColor,
                           ),
@@ -272,9 +268,9 @@ class _SettingsViewState extends State<SettingsView> {
                   isHindi ? 'WhatsApp शेयर में दाम शामिल करें' : 'Include Prices in WhatsApp Share',
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: textColor),
                 ),
-                value: _includePricesInWhatsApp,
+                value: settings.includePricesInWhatsApp,
                 onChanged: (val) {
-                  setState(() => _includePricesInWhatsApp = val);
+                  settings.setIncludePricesInWhatsApp(val);
                 },
                 activeThumbColor: primaryGreen,
               ),
@@ -304,7 +300,7 @@ class _SettingsViewState extends State<SettingsView> {
                 trailing: _isLoading
                     ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                     : Icon(Icons.chevron_right, color: subtextColor, size: 20),
-                onTap: _itemCount > 0 ? _showClearListConfirmation : null,
+                onTap: _itemCount > 0 ? () => _showClearListConfirmation(settings, inventory) : null,
               ),
             ],
           ),
@@ -393,4 +389,3 @@ class _SettingsViewState extends State<SettingsView> {
     );
   }
 }
-

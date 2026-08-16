@@ -1,12 +1,16 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/catalog_item.dart';
 import '../models/inventory_item.dart';
+import '../providers/app_inventory_provider.dart';
 import '../services/database_helper.dart';
 import '../services/localization_service.dart';
 import '../widgets/gharkilist_logo.dart';
 import '../widgets/item_icon_widget.dart';
 import 'item_detail_sheet.dart';
+import 'settings_view.dart';
+import 'translator_view.dart';
 
 class CatalogBrowseView extends StatefulWidget {
   final String? capturedPhotoPath;
@@ -98,6 +102,30 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
     );
   }
 
+  void _openSettingsView() {
+    final inventory = context.read<AppInventoryProvider>();
+    if (inventory.activeList == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SettingsView(
+          activeList: inventory.activeList!,
+          onOpenTranslator: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => TranslatorView(
+                  onItemAdded: (item) => inventory.addInventoryItem(item),
+                ),
+              ),
+            );
+          },
+          onListCleared: () => inventory.clearActiveList(),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -124,7 +152,8 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
         actions: [
           IconButton(
             icon: Icon(Icons.settings_outlined, color: iconColor, size: 26),
-            onPressed: () => Navigator.pop(context),
+            tooltip: isHindi ? 'सेटिंग्स' : 'Settings',
+            onPressed: _openSettingsView,
           ),
           const SizedBox(width: 6),
         ],
@@ -149,23 +178,31 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
                   Expanded(
                     child: TextField(
                       controller: _searchController,
-                      style: TextStyle(color: textColor, fontSize: 16),
                       onChanged: _onSearchChanged,
+                      style: TextStyle(color: textColor, fontSize: 14),
                       decoration: InputDecoration(
-                        hintText: isHindi ? 'सामान खोजें' : 'Search',
-                        hintStyle: TextStyle(color: subtextColor, fontSize: 16),
+                        hintText: isHindi ? 'आइटम खोजें (जैसे: दाल, साबुन...)' : 'Search items (e.g. Atta, Rice, Soap...)',
+                        hintStyle: TextStyle(color: subtextColor, fontSize: 14),
                         border: InputBorder.none,
                         isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 10),
                       ),
                     ),
                   ),
-                  Icon(Icons.tune, color: subtextColor, size: 20),
+                  if (_searchController.text.isNotEmpty)
+                    GestureDetector(
+                      onTap: () {
+                        _searchController.clear();
+                        _onSearchChanged('');
+                      },
+                      child: Icon(Icons.close, color: subtextColor, size: 18),
+                    ),
                 ],
               ),
             ),
           ),
 
-          // Horizontal Category Filter Pills
+          // Category Chips Row
           SizedBox(
             height: 38,
             child: ListView.builder(
@@ -175,7 +212,7 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
               itemBuilder: (context, index) {
                 final catKey = _categories[index];
                 final catLabel = LocalizationService.getCategoryName(catKey, widget.language);
-                final isSelected = catKey == _selectedCategory;
+                final isSelected = _selectedCategory == catKey;
 
                 if (isSelected) {
                   return Padding(
@@ -247,38 +284,40 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
                             widget.language,
                           );
 
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            child: Material(
-                              color: cardBg,
-                              clipBehavior: Clip.antiAlias,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                side: BorderSide(color: borderColor),
-                              ),
-                              child: ListTile(
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                                leading: ItemIconWidget(
-                                  itemId: item.id,
-                                  category: item.category,
-                                  emojiHint: item.iconEmoji,
-                                  size: 50,
-                                  iconSize: 24,
+                          return RepaintBoundary(
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              child: Material(
+                                color: cardBg,
+                                clipBehavior: Clip.antiAlias,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  side: BorderSide(color: borderColor),
                                 ),
-                                title: Text(
-                                  displayName,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18,
-                                    color: textColor,
+                                child: ListTile(
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                                  leading: ItemIconWidget(
+                                    itemId: item.id,
+                                    category: item.category,
+                                    emojiHint: item.iconEmoji,
+                                    size: 50,
+                                    iconSize: 24,
                                   ),
+                                  title: Text(
+                                    displayName,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                      color: textColor,
+                                    ),
+                                  ),
+                                  trailing: Icon(
+                                    Icons.add_circle_outline,
+                                    color: isDark ? const Color(0xFF00C853) : const Color(0xFF000000),
+                                    size: 26,
+                                  ),
+                                  onTap: () => _openItemDetail(item),
                                 ),
-                                trailing: Icon(
-                                  Icons.add_circle_outline,
-                                  color: isDark ? const Color(0xFF00C853) : const Color(0xFF000000),
-                                  size: 26,
-                                ),
-                                onTap: () => _openItemDetail(item),
                               ),
                             ),
                           );

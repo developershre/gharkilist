@@ -1,10 +1,14 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import '../models/inventory_item.dart';
+import '../providers/app_inventory_provider.dart';
 import '../services/localization_service.dart';
 import 'add_item_form_view.dart';
+import 'settings_view.dart';
+import 'translator_view.dart';
 
 class ScanCaptureView extends StatefulWidget {
   final int inventoryId;
@@ -27,7 +31,6 @@ class ScanCaptureView extends StatefulWidget {
 class _ScanCaptureViewState extends State<ScanCaptureView> {
   final ImagePicker _picker = ImagePicker();
   XFile? _capturedFile;
-  bool _isProcessing = false;
 
   Future<void> _takePhoto() async {
     final XFile? photo = await _picker.pickImage(
@@ -38,17 +41,8 @@ class _ScanCaptureViewState extends State<ScanCaptureView> {
     if (photo != null) {
       setState(() {
         _capturedFile = photo;
-        _isProcessing = true;
       });
-
-      await Future.delayed(const Duration(milliseconds: 200));
-
-      if (mounted) {
-        setState(() {
-          _isProcessing = false;
-        });
-        _navigateToFormWithPhoto(photo.path);
-      }
+      _navigateToFormWithPhoto(photo.path);
     }
   }
 
@@ -82,6 +76,30 @@ class _ScanCaptureViewState extends State<ScanCaptureView> {
     );
   }
 
+  void _openSettingsView() {
+    final inventory = context.read<AppInventoryProvider>();
+    if (inventory.activeList == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SettingsView(
+          activeList: inventory.activeList!,
+          onOpenTranslator: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => TranslatorView(
+                  onItemAdded: (item) => inventory.addInventoryItem(item),
+                ),
+              ),
+            );
+          },
+          onListCleared: () => inventory.clearActiveList(),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -101,6 +119,14 @@ class _ScanCaptureViewState extends State<ScanCaptureView> {
           isHindi ? 'कैमरा स्कैन' : 'Camera Scan',
           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.settings_outlined, color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF1E293B), size: 26),
+            tooltip: isHindi ? 'सेटिंग्स' : 'Settings',
+            onPressed: _openSettingsView,
+          ),
+          const SizedBox(width: 6),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -139,22 +165,20 @@ class _ScanCaptureViewState extends State<ScanCaptureView> {
                           ),
                           const SizedBox(height: 24),
                           Text(
-                            isHindi ? 'सामान की फोटो लें' : 'Scan Item Photo',
-                            style: TextStyle(
-                              fontSize: 20,
+                            isHindi ? 'सामान का फोटो खीचें' : 'Take a photo of your item',
+                            style: const TextStyle(
+                              fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white : const Color(0xFF0F172A),
                             ),
                           ),
                           const SizedBox(height: 8),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                            child: Text(
-                              isHindi
-                                  ? 'सामान या किराना थैले की फोटो खींचकर अपनी सूची में सहेजें!'
-                                  : 'Take a photo of any grocery packet or Kirana bag to save it in your inventory!',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(fontSize: 14, color: Colors.grey),
+                          Text(
+                            isHindi
+                                ? 'पैकेट या सामान की फोटो लेकर जोड़ें'
+                                : 'Snap a picture of the product or receipt',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                             ),
                           ),
                         ],
@@ -162,60 +186,50 @@ class _ScanCaptureViewState extends State<ScanCaptureView> {
               ),
             ),
             const SizedBox(height: 24),
-            if (_isProcessing)
-              Column(
-                children: [
-                  const CircularProgressIndicator(),
-                  const SizedBox(height: 12),
-                  Text(
-                    isHindi ? 'चित्र प्रोसेस हो रहा है...' : 'Processing image...',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ],
-              )
-            else
-              Row(
-                children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 52,
-                      child: ShadButton.outline(
-                        onPressed: _pickFromGallery,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.photo_library, size: 20),
-                            const SizedBox(width: 8),
-                            Text(
-                              isHindi ? 'गैलरी' : 'Gallery',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                            ),
-                          ],
+            Row(
+              children: [
+                Expanded(
+                  child: ShadButton.outline(
+                    height: 52,
+                    onPressed: _pickFromGallery,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.photo_library_outlined, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          isHindi ? 'गैलरी से चुनें' : 'Gallery',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
-                      ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: SizedBox(
-                      height: 52,
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF0F172A),
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: ShadButton(
+                    height: 52,
+                    backgroundColor: const Color(0xFF0EA5E9),
+                    onPressed: _takePhoto,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.camera_alt, size: 20, color: Colors.white),
+                        const SizedBox(width: 8),
+                        Text(
+                          isHindi ? 'फोटो लें' : 'Take Photo',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                        icon: const Icon(Icons.camera_alt, size: 22),
-                        label: Text(
-                          isHindi ? 'फोटो खींचें' : 'Take Photo',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                        ),
-                        onPressed: _takePhoto,
-                      ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
           ],
         ),
       ),

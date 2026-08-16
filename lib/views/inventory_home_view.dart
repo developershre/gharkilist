@@ -524,28 +524,30 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                             }
                           }
                         },
-                        child: InventoryItemTile(
-                          key: ValueKey(item.id ?? item.catalogId),
-                          index: index,
-                          item: item,
-                          language: widget.language,
-                          onTap: () => _editItem(item),
-                          onQuantityChanged: (newQty) async {
-                            if (item.id != null) {
-                              final updated = item.copyWith(quantity: newQty);
-                              await DatabaseHelper.instance.updateInventoryItem(updated);
-                              widget.onRefresh();
-                            }
-                          },
-                          onQuantityTap: () => _showEditQuantityDialog(item),
-                          onUnitChanged: (newUnit) async {
-                            if (item.id != null) {
-                              final updated = item.copyWith(unit: newUnit);
-                              await DatabaseHelper.instance.updateInventoryItem(updated);
-                              widget.onRefresh();
-                            }
-                          },
-                          onDeleteTap: () => _deleteItem(item),
+                        child: RepaintBoundary(
+                          child: InventoryItemTile(
+                            key: ValueKey(item.id ?? item.catalogId),
+                            index: index,
+                            item: item,
+                            language: widget.language,
+                            onTap: () => _editItem(item),
+                            onQuantityChanged: (newQty) async {
+                              if (item.id != null) {
+                                final updated = item.copyWith(quantity: newQty);
+                                await DatabaseHelper.instance.updateInventoryItem(updated);
+                                widget.onRefresh();
+                              }
+                            },
+                            onQuantityTap: () => _showEditQuantityDialog(item),
+                            onUnitChanged: (newUnit) async {
+                              if (item.id != null) {
+                                final updated = item.copyWith(unit: newUnit);
+                                await DatabaseHelper.instance.updateInventoryItem(updated);
+                                widget.onRefresh();
+                              }
+                            },
+                            onDeleteTap: () => _deleteItem(item),
+                          ),
                         ),
                       );
                     },

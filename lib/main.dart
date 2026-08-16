@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import 'models/inventory_item.dart';
-import 'models/inventory_list.dart';
-import 'services/database_helper.dart';
+import 'providers/app_inventory_provider.dart';
+import 'providers/app_settings_provider.dart';
 import 'services/localization_service.dart';
 import 'views/catalog_browse_view.dart';
 import 'views/inventory_home_view.dart';
@@ -14,42 +14,26 @@ import 'widgets/gharkilist_logo.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const GharkilistApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AppSettingsProvider()),
+        ChangeNotifierProvider(create: (_) => AppInventoryProvider()..preloadData()),
+      ],
+      child: const GharkilistApp(),
+    ),
+  );
 }
 
-class GharkilistApp extends StatefulWidget {
+class GharkilistApp extends StatelessWidget {
   const GharkilistApp({super.key});
-
-  static GharkilistAppState of(BuildContext context) =>
-      context.findAncestorStateOfType<GharkilistAppState>()!;
-
-  @override
-  State<GharkilistApp> createState() => GharkilistAppState();
-}
-
-class GharkilistAppState extends State<GharkilistApp> {
-  ThemeMode _themeMode = ThemeMode.system; // Default: System Theme
-  AppLanguage _language = AppLanguage.english; // Default: English
-
-  void setThemeMode(ThemeMode mode) {
-    setState(() {
-      _themeMode = mode;
-    });
-  }
-
-  void setLanguage(AppLanguage language) {
-    setState(() {
-      _language = language;
-    });
-  }
-
-  ThemeMode get themeMode => _themeMode;
-  AppLanguage get language => _language;
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<AppSettingsProvider>();
+
     return ShadApp(
-      title: _language == AppLanguage.hindi ? 'घरकीलिस्ट' : 'gharkilist',
+      title: settings.isHindi ? 'घरकीलिस्ट' : 'gharkilist',
       theme: ShadThemeData(
         brightness: Brightness.light,
         colorScheme: const ShadSlateColorScheme.light(),
@@ -60,174 +44,69 @@ class GharkilistAppState extends State<GharkilistApp> {
         colorScheme: const ShadSlateColorScheme.dark(),
         textTheme: ShadTextTheme(family: GoogleFonts.inter().fontFamily),
       ),
-      themeMode: _themeMode,
+      themeMode: settings.themeMode,
       home: const MainHomeScreen(),
     );
   }
 }
 
-class MainHomeScreen extends StatefulWidget {
+class MainHomeScreen extends StatelessWidget {
   const MainHomeScreen({super.key});
 
-  @override
-  State<MainHomeScreen> createState() => _MainHomeScreenState();
-}
-
-class _MainHomeScreenState extends State<MainHomeScreen> {
-  InventoryList? _activeList;
-  List<InventoryList> _allLists = [];
-  List<InventoryItem> _inventoryItems = [];
-  bool _isInitialLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _initialLoad();
-  }
-
-  Future<void> _loadAllLists() async {
-    final lists = await DatabaseHelper.instance.getAllInventories();
-    if (mounted) {
-      setState(() {
-        _allLists = lists;
-      });
-    }
-  }
-
-  Future<void> _initialLoad() async {
-    final lists = await DatabaseHelper.instance.getAllInventories();
-    final defaultList = lists.isNotEmpty
-        ? lists.firstWhere(
-            (l) => l.name.toLowerCase().contains('mahine') || l.isDefault,
-            orElse: () => lists.first,
-          )
-        : InventoryList(
-            id: 1,
-            name: 'Mahine ka',
-            iconEmoji: '🏠',
-            isDefault: true,
-          );
-
-    final items = await DatabaseHelper.instance.getInventoryItemsForList(
-      defaultList.id ?? 1,
-    );
-
-    if (mounted) {
-      setState(() {
-        _allLists = lists;
-        _activeList = defaultList;
-        _inventoryItems = items;
-        _isInitialLoading = false;
-      });
-    }
-  }
-
-  Future<void> _refreshInventory() async {
-    if (_activeList?.id == null) return;
-    final items = await DatabaseHelper.instance.getInventoryItemsForList(
-      _activeList!.id!,
-    );
-    if (mounted) {
-      setState(() {
-        _inventoryItems = items;
-      });
-    }
-  }
-
-  void _switchActiveList(InventoryList newList) async {
-    final listId = newList.id;
-    final items = listId != null
-        ? await DatabaseHelper.instance.getInventoryItemsForList(listId)
-        : <InventoryItem>[];
-    if (mounted) {
-      setState(() {
-        _activeList = newList;
-        _inventoryItems = items;
-      });
-    }
-  }
-
-  void _onListCreated(InventoryList newList) async {
-    await _loadAllLists();
-    _switchActiveList(newList);
-  }
-
-  void _openScanView() {
-    final appState = GharkilistApp.of(context);
+  void _openScanView(BuildContext context) {
+    final settings = context.read<AppSettingsProvider>();
+    final inventory = context.read<AppInventoryProvider>();
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => ScanCaptureView(
-          inventoryId: _activeList?.id ?? 1,
-          language: appState.language,
-          onRefresh: _refreshInventory,
-          onItemAdded: (item) async {
-            final itemWithList = item.copyWith(
-              inventoryId: _activeList?.id ?? 1,
-            );
-            await DatabaseHelper.instance.addInventoryItem(itemWithList);
-            _refreshInventory();
-          },
+          inventoryId: inventory.activeList?.id ?? 1,
+          language: settings.language,
+          onRefresh: () => inventory.refreshActiveInventory(),
+          onItemAdded: (item) => inventory.addInventoryItem(item),
         ),
       ),
     );
   }
 
-  void _openBrowseView() {
-    final appState = GharkilistApp.of(context);
+  void _openBrowseView(BuildContext context) {
+    final settings = context.read<AppSettingsProvider>();
+    final inventory = context.read<AppInventoryProvider>();
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => CatalogBrowseView(
-          language: appState.language,
-          onItemAdded: (item) async {
-            final itemWithList = item.copyWith(
-              inventoryId: _activeList?.id ?? 1,
-            );
-            await DatabaseHelper.instance.addInventoryItem(itemWithList);
-            _refreshInventory();
-          },
+          language: settings.language,
+          onItemAdded: (item) => inventory.addInventoryItem(item),
         ),
       ),
     );
   }
 
-  void _openTranslatorView() {
-    final appState = GharkilistApp.of(context);
+  void _openTranslatorView(BuildContext context) {
+    final settings = context.read<AppSettingsProvider>();
+    final inventory = context.read<AppInventoryProvider>();
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => TranslatorView(
-          language: appState.language,
-          onItemAdded: (item) async {
-            final itemWithList = item.copyWith(
-              inventoryId: _activeList?.id ?? 1,
-            );
-            await DatabaseHelper.instance.addInventoryItem(itemWithList);
-            _refreshInventory();
-          },
+          language: settings.language,
+          onItemAdded: (item) => inventory.addInventoryItem(item),
         ),
       ),
     );
   }
 
-  void _openSettingsView() {
-    if (_activeList == null) return;
-    final appState = GharkilistApp.of(context);
+  void _openSettingsView(BuildContext context) {
+    final inventory = context.read<AppInventoryProvider>();
+    if (inventory.activeList == null) return;
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => SettingsView(
-          activeList: _activeList!,
-          themeMode: appState.themeMode,
-          language: appState.language,
-          onSetThemeMode: appState.setThemeMode,
-          onSetLanguage: appState.setLanguage,
-          onOpenTranslator: _openTranslatorView,
-          onListCleared: () async {
-            await _refreshInventory();
-            await _loadAllLists();
-          },
+          activeList: inventory.activeList!,
+          onOpenTranslator: () => _openTranslatorView(context),
+          onListCleared: () => inventory.clearActiveList(),
         ),
       ),
     );
@@ -235,23 +114,24 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final appState = GharkilistApp.of(context);
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final language = appState.language;
+    final settings = context.watch<AppSettingsProvider>();
+    final inventory = context.watch<AppInventoryProvider>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    if (_isInitialLoading || _activeList == null) {
+    if (inventory.isInitialLoading || inventory.activeList == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    final listsToPass = _allLists.isNotEmpty ? _allLists : [_activeList!];
+    final listsToPass = inventory.allLists.isNotEmpty
+        ? inventory.allLists
+        : [inventory.activeList!];
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
         elevation: 0,
         titleSpacing: 16,
-        title: GharkiListLogoWidget(language: language),
+        title: GharkiListLogoWidget(language: settings.language),
         actions: [
           IconButton(
             icon: Icon(
@@ -259,22 +139,22 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
               color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF1E293B),
               size: 26,
             ),
-            tooltip: language == AppLanguage.english ? 'Settings' : 'सेटिंग्स',
-            onPressed: _openSettingsView,
+            tooltip: settings.language == AppLanguage.english ? 'Settings' : 'सेटिंग्स',
+            onPressed: () => _openSettingsView(context),
           ),
           const SizedBox(width: 6),
         ],
       ),
       body: InventoryHomeView(
-        activeList: _activeList!,
+        activeList: inventory.activeList!,
         allLists: listsToPass,
-        items: _inventoryItems,
-        language: language,
-        onRefresh: _refreshInventory,
-        onListChanged: _switchActiveList,
-        onListCreated: _onListCreated,
-        onAddScanTap: _openScanView,
-        onAddBrowseTap: _openBrowseView,
+        items: inventory.inventoryItems,
+        language: settings.language,
+        onRefresh: () => inventory.refreshActiveInventory(),
+        onListChanged: (newList) => inventory.switchActiveList(newList),
+        onListCreated: (newList) => inventory.createInventoryList(newList.name),
+        onAddScanTap: () => _openScanView(context),
+        onAddBrowseTap: () => _openBrowseView(context),
       ),
     );
   }

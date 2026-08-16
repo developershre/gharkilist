@@ -160,6 +160,8 @@ class ItemIconWidget extends StatelessWidget {
             file,
             width: size,
             height: size,
+            cacheWidth: (size * MediaQuery.of(context).devicePixelRatio).toInt(),
+            cacheHeight: (size * MediaQuery.of(context).devicePixelRatio).toInt(),
             fit: BoxFit.cover,
             errorBuilder: (context, error, stackTrace) => _buildIconFallback(context),
           ),

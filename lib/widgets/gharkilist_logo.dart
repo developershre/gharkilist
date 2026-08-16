@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../main.dart';
+import 'package:provider/provider.dart';
+import '../providers/app_settings_provider.dart';
 import '../services/localization_service.dart';
 
 class GharkiListLogoWidget extends StatelessWidget {
@@ -21,7 +22,8 @@ class GharkiListLogoWidget extends StatelessWidget {
 
     AppLanguage currentLang = language ?? AppLanguage.english;
     try {
-      currentLang = language ?? GharkilistApp.of(context).language;
+      final settings = context.watch<AppSettingsProvider>();
+      currentLang = language ?? settings.language;
     } catch (_) {}
 
     final isHindi = currentLang == AppLanguage.hindi;
