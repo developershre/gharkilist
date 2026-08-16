@@ -1,6 +1,6 @@
 name: gharkilist
-description: "Bhandar Khata - Smart Household Pantry & Kirana Inventory Tracker for Indian Families."
-publish_to: 'none' 
+description: "gharkilist: Smart Household Inventory Tracker for Indian Families."
+publish_to: "none"
 
 version: 1.0.0+1
 
@@ -27,15 +27,21 @@ dev_dependencies:
 
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.4
+  sqflite_common_ffi: ^2.3.4
 
 flutter:
   uses-material-design: true
   assets:
-    - assets/icon/app_icon.png
+    - assets/icon/
     - assets/images/
 
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "assets/icon/app_icon.png"
+  image_path: "assets/icon/adaptive-logo.png"
   min_sdk_android: 21
+  adaptive_icon_background: "#ffffff"
+  adaptive_icon_foreground: "assets/icon/adaptive-logo.png"
+  monochrome_image: "assets/icon/adaptive-logo-monochrome.png"
+  remove_alpha_ios: true
+

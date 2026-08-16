@@ -48,7 +48,7 @@ class ShareService {
       sb.writeln('\n💰 *${language == AppLanguage.hindi ? 'अनुमानित कुल खर्च' : 'Estimated Total'}: ₹${totalEstPrice.toInt()}*');
     }
 
-    sb.writeln('\n_— Bhandar Khata_');
+    sb.writeln('\n_— Gharkilist_');
     return sb.toString();
   }
 

@@ -26,174 +26,136 @@ class InventoryItemTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
-    final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
-    final textColor = isDark ? Colors.white : const Color(0xFF000000);
-    final subtextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
-    final primaryGreen = const Color(0xFF00C853);
+    final borderColor = isDark
+        ? const Color(0xFF334155)
+        : const Color(0xFF334155).withValues(alpha: 0.2);
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569);
+    final primaryGreen = const Color(0xFF008744);
+    final deleteRed = const Color(0xFFC62828);
+
+    final qtyDisplay = item.quantity % 1 == 0
+        ? item.quantity.toInt().toString()
+        : item.quantity.toString();
+    final unitDisplay = item.unit.toLowerCase();
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderColor),
+        border: Border.all(color: borderColor, width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
+            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Row(
-        children: [
-          // Drag Handle
-          ReorderableDragStartListener(
-            index: index,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              child: Icon(
-                Icons.drag_indicator,
-                color: subtextColor,
-                size: 22,
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-
-          // Product Image Asset / Icon
-          GestureDetector(
-            onTap: onTap,
-            child: ItemIconWidget(
-              itemId: item.catalogId,
-              category: item.category,
-              emojiHint: item.catalogItem?.iconEmoji,
-              capturedPhotoPath: item.capturedPhotoPath,
-              size: 58,
-              iconSize: 30,
-            ),
-          ),
-          const SizedBox(width: 14),
-
-          // Middle Column: Title & Stepper Controls
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                GestureDetector(
-                  onTap: onTap,
-                  child: Text(
-                    item.customName,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: textColor,
-                    ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          child: Row(
+            children: [
+              // 6-dot Drag Handle
+              ReorderableDragStartListener(
+                index: index,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                  child: Icon(
+                    Icons.drag_indicator,
+                    color: isDark ? const Color(0xFF64748B) : const Color(0xFF475569),
+                    size: 24,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Row(
+              ),
+              const SizedBox(width: 12),
+
+              // Item Image / Icon
+              ItemIconWidget(
+                itemId: item.catalogId,
+                category: item.category,
+                emojiHint: item.catalogItem?.iconEmoji,
+                capturedPhotoPath: item.capturedPhotoPath,
+                size: 58,
+                iconSize: 30,
+              ),
+              const SizedBox(width: 16),
+
+              // Middle Title & Quantity Subtitle
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    InkWell(
-                      onTap: () {
-                        if (item.quantity > 1) {
-                          onQuantityChanged(item.quantity - 1);
-                        } else {
-                          onDeleteTap();
-                        }
-                      },
-                      borderRadius: BorderRadius.circular(6),
-                      child: Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: primaryGreen,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Icon(Icons.remove, color: Colors.white, size: 18),
+                    Text(
+                      item.customName,
+                      style: TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                        height: 1.2,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(height: 4),
                     GestureDetector(
                       onTap: onQuantityTap,
-                      child: Container(
-                        width: 48,
-                        height: 32,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: cardBg,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: textColor, width: 1.2),
+                      child: Text(
+                        '$qtyDisplay $unitDisplay',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: subtextColor,
                         ),
-                        child: Text(
-                          '${item.quantity % 1 == 0 ? item.quantity.toInt() : item.quantity}',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: textColor,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    InkWell(
-                      onTap: () => onQuantityChanged(item.quantity + 1),
-                      borderRadius: BorderRadius.circular(6),
-                      child: Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: primaryGreen,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Icon(Icons.add, color: Colors.white, size: 18),
                       ),
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-
-          // Right: Unit Dropdown Pill Button
-          PopupMenuButton<String>(
-            onSelected: onUnitChanged,
-            itemBuilder: (context) => [
-              'KG', 'G', 'L', 'ML', 'PCS', 'PKT'
-            ].map((u) => PopupMenuItem(value: u, child: Text(u))).toList(),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: primaryGreen,
-                borderRadius: BorderRadius.circular(10),
               ),
-              child: Row(
+
+              // Right Action Buttons: Green Edit Dropdown Menu & Red Delete
+              Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    item.unit.toUpperCase(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
+                  // Edit Button (opens bottom popup container)
+                  IconButton(
+                    icon: Icon(
+                      Icons.edit_square,
+                      color: primaryGreen,
+                      size: 26,
                     ),
+                    tooltip: 'Edit Item',
+                    padding: const EdgeInsets.all(6),
+                    constraints: const BoxConstraints(),
+                    onPressed: onTap,
                   ),
-                  const SizedBox(width: 4),
-                  const Icon(
-                    Icons.keyboard_arrow_down,
-                    color: Colors.white,
-                    size: 18,
+
+                  const SizedBox(width: 6),
+
+                  // Delete Trash Icon Button
+                  IconButton(
+                    icon: Icon(
+                      Icons.delete_outline,
+                      color: deleteRed,
+                      size: 26,
+                    ),
+                    tooltip: 'Delete Item',
+                    padding: const EdgeInsets.all(6),
+                    constraints: const BoxConstraints(),
+                    onPressed: onDeleteTap,
                   ),
                 ],
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 }
+

@@ -1,9 +1,16 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gharkilist/main.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
-  testWidgets('Bhandar Khata app launch smoke test', (WidgetTester tester) async {
-    await tester.pumpWidget(const BhandarKhataApp());
-    expect(find.byType(BhandarKhataApp), findsOneWidget);
+  setUpAll(() {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  });
+
+  testWidgets('Gharkilist app launch smoke test', (WidgetTester tester) async {
+    await tester.pumpWidget(const GharkilistApp());
+    expect(find.byType(GharkilistApp), findsOneWidget);
   });
 }
+

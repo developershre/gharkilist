@@ -11,6 +11,8 @@ class ItemDetailSheet extends StatefulWidget {
   final String? capturedPhotoPath;
   final AppLanguage language;
   final Function(InventoryItem item) onSave;
+  final VoidCallback? onDelete;
+  final InventoryItem? existingItem;
 
   const ItemDetailSheet({
     super.key,
@@ -19,6 +21,8 @@ class ItemDetailSheet extends StatefulWidget {
     this.capturedPhotoPath,
     this.language = AppLanguage.english,
     required this.onSave,
+    this.onDelete,
+    this.existingItem,
   });
 
   @override
@@ -34,15 +38,28 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
   @override
   void initState() {
     super.initState();
-    final displayName = LocalizationService.getItemName(
-      widget.catalogItem.nameEn,
-      widget.catalogItem.nameHi,
-      widget.language,
-    );
+    final displayName = widget.existingItem?.customName ??
+        LocalizationService.getItemName(
+          widget.catalogItem.nameEn,
+          widget.catalogItem.nameHi,
+          widget.language,
+        );
     _customNameController = TextEditingController(text: displayName);
-    _quantityController = TextEditingController(text: '1');
-    _priceController = TextEditingController();
-    _selectedUnit = widget.catalogItem.defaultUnit;
+    _quantityController = TextEditingController(
+      text: widget.existingItem != null
+          ? (widget.existingItem!.quantity % 1 == 0
+              ? widget.existingItem!.quantity.toInt().toString()
+              : widget.existingItem!.quantity.toString())
+          : '1',
+    );
+    _priceController = TextEditingController(
+      text: widget.existingItem?.estimatedPrice != null
+          ? (widget.existingItem!.estimatedPrice! % 1 == 0
+              ? widget.existingItem!.estimatedPrice!.toInt().toString()
+              : widget.existingItem!.estimatedPrice!.toString())
+          : '',
+    );
+    _selectedUnit = widget.existingItem?.unit ?? widget.catalogItem.defaultUnit;
   }
 
   @override
@@ -104,7 +121,7 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
             // Top Drag Handle Indicator
             Center(
               child: Container(
-                width: 40,
+                width: 44,
                 height: 4,
                 decoration: BoxDecoration(
                   color: handleColor,
@@ -112,19 +129,19 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
 
-            // Header Item Info
+            // Header Item Info with Close Button
             Row(
               children: [
                 ItemIconWidget(
                   itemId: widget.catalogItem.id,
                   category: widget.catalogItem.category,
                   emojiHint: widget.catalogItem.iconEmoji,
-                  size: 64,
-                  iconSize: 32,
+                  size: 60,
+                  iconSize: 30,
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -132,26 +149,30 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
                       Text(
                         cleanTitle,
                         style: TextStyle(
-                          fontSize: 22,
+                          fontSize: 21,
                           fontWeight: FontWeight.bold,
                           color: textColor,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       Text(
                         widget.catalogItem.category,
                         style: const TextStyle(
                           color: Color(0xFF00C853),
-                          fontSize: 15,
+                          fontSize: 14,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
                   ),
                 ),
+                IconButton(
+                  icon: Icon(Icons.close, color: hintColor),
+                  onPressed: () => Navigator.pop(context),
+                ),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
             if (widget.capturedPhotoPath != null) ...[
               ClipRRect(
@@ -193,10 +214,12 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
             ),
             const SizedBox(height: 16),
 
-            // Quantity & Unit side by side
+            // Quantity Stepper & Unit side by side
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
+                  flex: 3,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -209,20 +232,63 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
                         ),
                       ),
                       const SizedBox(height: 6),
-                      TextField(
-                        controller: _quantityController,
-                        style: TextStyle(color: textColor, fontSize: 16),
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        decoration: InputDecoration(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: borderColor),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: borderColor),
-                          ),
+                      Container(
+                        height: 48,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: borderColor),
+                        ),
+                        child: Row(
+                          children: [
+                            InkWell(
+                              onTap: () {
+                                final val = double.tryParse(_quantityController.text) ?? 1.0;
+                                if (val > 1) {
+                                  final newVal = val - 1;
+                                  _quantityController.text =
+                                      newVal % 1 == 0 ? newVal.toInt().toString() : newVal.toString();
+                                  setState(() {});
+                                }
+                              },
+                              borderRadius: const BorderRadius.horizontal(left: Radius.circular(8)),
+                              child: Container(
+                                width: 38,
+                                height: double.infinity,
+                                alignment: Alignment.center,
+                                child: Icon(Icons.remove, color: textColor, size: 18),
+                              ),
+                            ),
+                            Expanded(
+                              child: TextField(
+                                controller: _quantityController,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                    color: textColor, fontSize: 16, fontWeight: FontWeight.bold),
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                decoration: const InputDecoration(
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                              ),
+                            ),
+                            InkWell(
+                              onTap: () {
+                                final val = double.tryParse(_quantityController.text) ?? 1.0;
+                                final newVal = val + 1;
+                                _quantityController.text =
+                                    newVal % 1 == 0 ? newVal.toInt().toString() : newVal.toString();
+                                setState(() {});
+                              },
+                              borderRadius: const BorderRadius.horizontal(right: Radius.circular(8)),
+                              child: Container(
+                                width: 38,
+                                height: double.infinity,
+                                alignment: Alignment.center,
+                                child: Icon(Icons.add, color: textColor, size: 18),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -230,6 +296,7 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
                 ),
                 const SizedBox(width: 14),
                 Expanded(
+                  flex: 2,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -245,9 +312,9 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
                       DropdownButtonFormField<String>(
                         dropdownColor: cardBg,
                         initialValue: _selectedUnit.toUpperCase(),
-                        style: TextStyle(color: textColor, fontSize: 16),
+                        style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.w600),
                         decoration: InputDecoration(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide(color: borderColor),
@@ -260,7 +327,7 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
                         items: ['KG', 'G', 'L', 'ML', 'PCS', 'PKT'].map((u) {
                           return DropdownMenuItem(
                             value: u,
-                            child: Text(u, style: TextStyle(fontWeight: FontWeight.w500, color: textColor)),
+                            child: Text(u, style: TextStyle(fontWeight: FontWeight.w600, color: textColor)),
                           );
                         }).toList(),
                         onChanged: (val) {
@@ -335,15 +402,66 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
                   ),
                 ),
                 onPressed: _handleSave,
-                child: const Text(
-                  'Save to Inventory',
-                  style: TextStyle(
+                child: Text(
+                  widget.existingItem != null ? 'Update Inventory Item' : 'Save to Inventory',
+                  style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
                   ),
                 ),
               ),
             ),
+            if (widget.onDelete != null) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFFEF4444),
+                    side: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: Text(widget.language == AppLanguage.hindi ? 'आइटम हटाएं?' : 'Delete Item?'),
+                        content: Text(
+                          widget.language == AppLanguage.hindi
+                              ? 'क्या आप इसे लिस्ट से हटाना चाहते हैं?'
+                              : 'Are you sure you want to remove this item from your inventory?',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            child: Text(widget.language == AppLanguage.hindi ? 'रद्द करें' : 'Cancel'),
+                          ),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFEF4444),
+                              foregroundColor: Colors.white,
+                            ),
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              widget.onDelete!();
+                            },
+                            child: Text(widget.language == AppLanguage.hindi ? 'हटाएं' : 'Delete'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.delete_outline, size: 20),
+                  label: Text(
+                    widget.language == AppLanguage.hindi ? 'आइटम हटाएं' : 'Delete Item',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

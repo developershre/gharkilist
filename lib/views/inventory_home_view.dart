@@ -236,10 +236,55 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
   }
 
   void _deleteItem(InventoryItem item) async {
-    if (item.id != null) {
-      await DatabaseHelper.instance.deleteInventoryItem(item.id!);
-      widget.onRefresh();
-    }
+    if (item.id == null) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(widget.language == AppLanguage.hindi ? 'आइटम हटाएं?' : 'Delete Item?'),
+        content: Text(
+          widget.language == AppLanguage.hindi
+              ? 'क्या आप "${item.customName}" को लिस्ट से हटाना चाहते हैं?'
+              : 'Are you sure you want to remove "${item.customName}" from your inventory?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(widget.language == AppLanguage.hindi ? 'रद्द करें' : 'Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final deletedItem = item;
+              await DatabaseHelper.instance.deleteInventoryItem(item.id!);
+              widget.onRefresh();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      widget.language == AppLanguage.hindi
+                          ? '"${deletedItem.customName}" हटा दिया गया'
+                          : '"${deletedItem.customName}" deleted',
+                    ),
+                    action: SnackBarAction(
+                      label: widget.language == AppLanguage.hindi ? 'वापस लाएं' : 'Undo',
+                      onPressed: () async {
+                        await DatabaseHelper.instance.addInventoryItem(deletedItem);
+                        widget.onRefresh();
+                      },
+                    ),
+                  ),
+                );
+              }
+            },
+            child: Text(widget.language == AppLanguage.hindi ? 'हटाएं' : 'Delete'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _editItem(InventoryItem item) {
@@ -250,6 +295,7 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
       backgroundColor: Colors.transparent,
       builder: (context) => ItemDetailSheet(
         catalogItem: item.catalogItem!,
+        existingItem: item,
         capturedPhotoPath: item.capturedPhotoPath,
         language: widget.language,
         onSave: (updated) async {
@@ -257,6 +303,10 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
           await DatabaseHelper.instance.updateInventoryItem(updatedWithId);
           widget.onRefresh();
           if (context.mounted) Navigator.pop(context);
+        },
+        onDelete: () {
+          Navigator.pop(context);
+          _deleteItem(item);
         },
       ),
     );
@@ -367,27 +417,103 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                     onReorderItem: _onReorderItems,
                     itemBuilder: (context, index) {
                       final item = displayItems[index];
-                      return InventoryItemTile(
-                        key: ValueKey(item.id ?? item.catalogId),
-                        index: index,
-                        item: item,
-                        onTap: () => _editItem(item),
-                        onQuantityChanged: (newQty) async {
+                      return Dismissible(
+                        key: ValueKey('dismiss_${item.id ?? item.catalogId}_$index'),
+                        direction: DismissDirection.endToStart,
+                        background: Container(
+                          margin: const EdgeInsets.only(bottom: 14),
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.only(right: 20),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEF4444),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.delete_outline, color: Colors.white, size: 24),
+                              SizedBox(width: 6),
+                              Text(
+                                'Delete',
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                              ),
+                            ],
+                          ),
+                        ),
+                        confirmDismiss: (direction) async {
+                          return await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: Text(widget.language == AppLanguage.hindi ? 'आइटम हटाएं?' : 'Delete Item?'),
+                              content: Text(
+                                widget.language == AppLanguage.hindi
+                                    ? 'क्या आप "${item.customName}" को लिस्ट से हटाना चाहते हैं?'
+                                    : 'Are you sure you want to remove "${item.customName}" from your inventory?',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, false),
+                                  child: Text(widget.language == AppLanguage.hindi ? 'रद्द करें' : 'Cancel'),
+                                ),
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFEF4444),
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  onPressed: () => Navigator.pop(ctx, true),
+                                  child: Text(widget.language == AppLanguage.hindi ? 'हटाएं' : 'Delete'),
+                                ),
+                              ],
+                            ),
+                          ) ?? false;
+                        },
+                        onDismissed: (direction) async {
                           if (item.id != null) {
-                            final updated = item.copyWith(quantity: newQty);
-                            await DatabaseHelper.instance.updateInventoryItem(updated);
+                            final deletedItem = item;
+                            await DatabaseHelper.instance.deleteInventoryItem(item.id!);
                             widget.onRefresh();
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    widget.language == AppLanguage.hindi
+                                        ? '"${deletedItem.customName}" हटा दिया गया'
+                                        : '"${deletedItem.customName}" deleted',
+                                  ),
+                                  action: SnackBarAction(
+                                    label: widget.language == AppLanguage.hindi ? 'वापस लाएं' : 'Undo',
+                                    onPressed: () async {
+                                      await DatabaseHelper.instance.addInventoryItem(deletedItem);
+                                      widget.onRefresh();
+                                    },
+                                  ),
+                                ),
+                              );
+                            }
                           }
                         },
-                        onQuantityTap: () => _showEditQuantityDialog(item),
-                        onUnitChanged: (newUnit) async {
-                          if (item.id != null) {
-                            final updated = item.copyWith(unit: newUnit);
-                            await DatabaseHelper.instance.updateInventoryItem(updated);
-                            widget.onRefresh();
-                          }
-                        },
-                        onDeleteTap: () => _deleteItem(item),
+                        child: InventoryItemTile(
+                          key: ValueKey(item.id ?? item.catalogId),
+                          index: index,
+                          item: item,
+                          onTap: () => _editItem(item),
+                          onQuantityChanged: (newQty) async {
+                            if (item.id != null) {
+                              final updated = item.copyWith(quantity: newQty);
+                              await DatabaseHelper.instance.updateInventoryItem(updated);
+                              widget.onRefresh();
+                            }
+                          },
+                          onQuantityTap: () => _showEditQuantityDialog(item),
+                          onUnitChanged: (newUnit) async {
+                            if (item.id != null) {
+                              final updated = item.copyWith(unit: newUnit);
+                              await DatabaseHelper.instance.updateInventoryItem(updated);
+                              widget.onRefresh();
+                            }
+                          },
+                          onDeleteTap: () => _deleteItem(item),
+                        ),
                       );
                     },
                   ),

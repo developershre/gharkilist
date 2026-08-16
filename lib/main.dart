@@ -14,20 +14,20 @@ import 'widgets/gharkilist_logo.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const BhandarKhataApp());
+  runApp(const GharkilistApp());
 }
 
-class BhandarKhataApp extends StatefulWidget {
-  const BhandarKhataApp({super.key});
+class GharkilistApp extends StatefulWidget {
+  const GharkilistApp({super.key});
 
-  static BhandarKhataAppState of(BuildContext context) =>
-      context.findAncestorStateOfType<BhandarKhataAppState>()!;
+  static GharkilistAppState of(BuildContext context) =>
+      context.findAncestorStateOfType<GharkilistAppState>()!;
 
   @override
-  State<BhandarKhataApp> createState() => BhandarKhataAppState();
+  State<GharkilistApp> createState() => GharkilistAppState();
 }
 
-class BhandarKhataAppState extends State<BhandarKhataApp> {
+class GharkilistAppState extends State<GharkilistApp> {
   ThemeMode _themeMode = ThemeMode.system; // Default: System Theme
   AppLanguage _language = AppLanguage.english; // Default: English
 
@@ -49,7 +49,7 @@ class BhandarKhataAppState extends State<BhandarKhataApp> {
   @override
   Widget build(BuildContext context) {
     return ShadApp(
-      title: 'Bhandar Khata',
+      title: 'gharkilist',
       theme: ShadThemeData(
         brightness: Brightness.light,
         colorScheme: const ShadSlateColorScheme.light(),
@@ -172,7 +172,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
   }
 
   void _openBrowseView() {
-    final appState = BhandarKhataApp.of(context);
+    final appState = GharkilistApp.of(context);
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -209,7 +209,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
 
   void _openSettingsView() {
     if (_activeList == null) return;
-    final appState = BhandarKhataApp.of(context);
+    final appState = GharkilistApp.of(context);
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -231,7 +231,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final appState = BhandarKhataApp.of(context);
+    final appState = GharkilistApp.of(context);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final language = appState.language;

@@ -316,7 +316,7 @@ class _SettingsViewState extends State<SettingsView> {
             child: Column(
               children: [
                 Text(
-                  'Bhandar Khata v1.0.0',
+                  'Gharkilist v1.0.0',
                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: subtextColor),
                 ),
                 const SizedBox(height: 2),

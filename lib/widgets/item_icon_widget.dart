@@ -25,22 +25,22 @@ class ItemIconWidget extends StatelessWidget {
   String? _getAssetImagePath() {
     final lowerId = itemId.toLowerCase();
     if (lowerId.contains('atta') || lowerId.contains('wheat') || lowerId.contains('aata')) {
-      return 'assets/images/aata.png';
+      return 'assets/images/aata.webp';
     }
     if (lowerId.contains('rice') || lowerId.contains('chawal')) {
-      return 'assets/images/rice.png';
+      return 'assets/images/rice.webp';
     }
     if (lowerId.contains('ghee')) {
-      return 'assets/images/ghee.png';
+      return 'assets/images/ghee.webp';
     }
     if (lowerId.contains('sugar') || lowerId.contains('cheeni')) {
-      return 'assets/images/sugar.png';
+      return 'assets/images/sugar.webp';
     }
     if (lowerId.contains('salt') || lowerId.contains('namak')) {
-      return 'assets/images/salt.png';
+      return 'assets/images/salt.webp';
     }
     if (lowerId.contains('tea') || lowerId.contains('chai')) {
-      return 'assets/images/tea.png';
+      return 'assets/images/tea.webp';
     }
     return null;
   }
