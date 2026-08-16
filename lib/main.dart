@@ -6,7 +6,6 @@ import 'models/inventory_list.dart';
 import 'services/database_helper.dart';
 import 'services/localization_service.dart';
 import 'views/catalog_browse_view.dart';
-import 'views/empty_state_view.dart';
 import 'views/inventory_home_view.dart';
 import 'views/scan_capture_view.dart';
 import 'views/settings_view.dart';
@@ -76,6 +75,7 @@ class MainHomeScreen extends StatefulWidget {
 
 class _MainHomeScreenState extends State<MainHomeScreen> {
   InventoryList? _activeList;
+  List<InventoryList> _allLists = [];
   List<InventoryItem> _inventoryItems = [];
   bool _isInitialLoading = true;
 
@@ -85,13 +85,25 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     _initialLoad();
   }
 
+  Future<void> _loadAllLists() async {
+    final lists = await DatabaseHelper.instance.getAllInventories();
+    if (mounted) {
+      setState(() {
+        _allLists = lists;
+      });
+    }
+  }
+
   Future<void> _initialLoad() async {
     final lists = await DatabaseHelper.instance.getAllInventories();
     final defaultList = lists.isNotEmpty
-        ? lists.firstWhere((l) => l.isDefault, orElse: () => lists.first)
+        ? lists.firstWhere(
+            (l) => l.name.toLowerCase().contains('mahine') || l.isDefault,
+            orElse: () => lists.first,
+          )
         : InventoryList(
             id: 1,
-            name: 'Kitchen Pantry',
+            name: 'Mahine ka',
             iconEmoji: '🏠',
             isDefault: true,
           );
@@ -102,6 +114,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
 
     if (mounted) {
       setState(() {
+        _allLists = lists;
         _activeList = defaultList;
         _inventoryItems = items;
         _isInitialLoading = false;
@@ -122,10 +135,21 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
   }
 
   void _switchActiveList(InventoryList newList) async {
-    setState(() {
-      _activeList = newList;
-    });
-    await _refreshInventory();
+    final listId = newList.id;
+    final items = listId != null
+        ? await DatabaseHelper.instance.getInventoryItemsForList(listId)
+        : <InventoryItem>[];
+    if (mounted) {
+      setState(() {
+        _activeList = newList;
+        _inventoryItems = items;
+      });
+    }
+  }
+
+  void _onListCreated(InventoryList newList) async {
+    await _loadAllLists();
+    _switchActiveList(newList);
   }
 
   void _openScanView() {
@@ -133,6 +157,8 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => ScanCaptureView(
+          inventoryId: _activeList?.id ?? 1,
+          onRefresh: _refreshInventory,
           onItemAdded: (item) async {
             final itemWithList = item.copyWith(
               inventoryId: _activeList?.id ?? 1,
@@ -194,7 +220,10 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
           onSetThemeMode: appState.setThemeMode,
           onSetLanguage: appState.setLanguage,
           onOpenTranslator: _openTranslatorView,
-          onListCleared: _refreshInventory,
+          onListCleared: () async {
+            await _refreshInventory();
+            await _loadAllLists();
+          },
         ),
       ),
     );
@@ -210,6 +239,8 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
     if (_isInitialLoading || _activeList == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+
+    final listsToPass = _allLists.isNotEmpty ? _allLists : [_activeList!];
 
     return Scaffold(
       appBar: AppBar(
@@ -230,37 +261,17 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
           const SizedBox(width: 6),
         ],
       ),
-      body: _inventoryItems.isEmpty
-          ? EmptyStateView(
-              activeList: _activeList!,
-              language: language,
-              onScanTap: _openScanView,
-              onBrowseTap: _openBrowseView,
-              onListChanged: _switchActiveList,
-              onQuickAddCatalogItem: (item) async {
-                final inv = InventoryItem(
-                  inventoryId: _activeList!.id ?? 1,
-                  catalogId: item.id,
-                  customName: item.nameEn,
-                  nameHi: item.nameHi,
-                  category: item.category,
-                  quantity: 1.0,
-                  unit: item.defaultUnit,
-                  catalogItem: item,
-                );
-                await DatabaseHelper.instance.addInventoryItem(inv);
-                _refreshInventory();
-              },
-            )
-          : InventoryHomeView(
-              activeList: _activeList!,
-              items: _inventoryItems,
-              language: language,
-              onRefresh: _refreshInventory,
-              onListChanged: _switchActiveList,
-              onAddScanTap: _openScanView,
-              onAddBrowseTap: _openBrowseView,
-            ),
+      body: InventoryHomeView(
+        activeList: _activeList!,
+        allLists: listsToPass,
+        items: _inventoryItems,
+        language: language,
+        onRefresh: _refreshInventory,
+        onListChanged: _switchActiveList,
+        onListCreated: _onListCreated,
+        onAddScanTap: _openScanView,
+        onAddBrowseTap: _openBrowseView,
+      ),
     );
   }
 }

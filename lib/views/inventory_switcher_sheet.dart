@@ -24,8 +24,6 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
   List<InventoryList> _lists = [];
   bool _isLoading = true;
 
-  final List<String> _emojiOptions = ['🏠', '🪔', '🎆', '🧹', '👶', '🛒', '💊', '🥳', '🥦', '☕'];
-
   @override
   void initState() {
     super.initState();
@@ -44,79 +42,59 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
 
   void _showCreateDialog() {
     final nameController = TextEditingController();
-    String selectedEmoji = '📦';
     final isHindi = widget.language == AppLanguage.hindi;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     showDialog(
       context: context,
       builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: Text(isHindi ? 'नई सूची बनाएं' : 'Create Custom Inventory List', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    isHindi ? 'सूची का नाम लिखें (जैसे त्यौहार, पूजा, दवायां):' : 'Enter List Name (e.g. Navratri, Party, Medicine):',
-                    style: const TextStyle(fontSize: 13, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: nameController,
-                    decoration: InputDecoration(
-                      hintText: isHindi ? 'सूची का नाम...' : 'List name...',
-                      border: const OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(isHindi ? 'आइकन चुनें:' : 'Select Icon:', style: const TextStyle(fontSize: 13, color: Colors.grey)),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    children: _emojiOptions.map((e) {
-                      final isSelected = e == selectedEmoji;
-                      return ChoiceChip(
-                        label: Text(e, style: const TextStyle(fontSize: 20)),
-                        selected: isSelected,
-                        onSelected: (val) {
-                          if (val) setDialogState(() => selectedEmoji = e);
-                        },
-                      );
-                    }).toList(),
-                  ),
-                ],
+        return AlertDialog(
+          title: Text(isHindi ? 'नई सूची बनाएं' : 'Create Custom Inventory List', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                isHindi ? 'सूची का नाम लिखें (जैसे त्यौहार, पूजा, दवायां):' : 'Enter List Name (e.g. Navratri, Party, Medicine):',
+                style: const TextStyle(fontSize: 13, color: Colors.grey),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text(isHindi ? 'रद्द करें' : 'Cancel', style: const TextStyle(fontSize: 15)),
+              const SizedBox(height: 8),
+              TextField(
+                controller: nameController,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: isHindi ? 'सूची का नाम...' : 'List name...',
+                  border: const OutlineInputBorder(),
                 ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0F172A),
-                    foregroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
-                  ),
-                  onPressed: () async {
-                    final name = nameController.text.trim();
-                    if (name.isNotEmpty) {
-                      final newList = await DatabaseHelper.instance.createInventory(
-                        name,
-                        selectedEmoji,
-                      );
-                      if (context.mounted) {
-                        Navigator.pop(context);
-                        widget.onListSelected(newList);
-                      }
-                    }
-                  },
-                  child: Text(isHindi ? 'बनाएं' : 'Create List', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                ),
-              ],
-            );
-          },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(isHindi ? 'रद्द करें' : 'Cancel', style: const TextStyle(fontSize: 15)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0F172A),
+                foregroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+              ),
+              onPressed: () async {
+                final name = nameController.text.trim();
+                if (name.isNotEmpty) {
+                  final newList = await DatabaseHelper.instance.createInventory(
+                    name,
+                    '',
+                  );
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    widget.onListSelected(newList);
+                  }
+                }
+              },
+              child: Text(isHindi ? 'बनाएं' : 'Create List', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+            ),
+          ],
         );
       },
     );
@@ -207,7 +185,23 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
                     ),
                     child: ListTile(
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                      leading: Text(list.iconEmoji, style: const TextStyle(fontSize: 32)),
+                      leading: Container(
+                        width: 40,
+                        height: 40,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF00C853).withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          list.name.isNotEmpty ? list.name[0].toUpperCase() : 'L',
+                          style: const TextStyle(
+                            color: Color(0xFF00C853),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                      ),
                       title: Text(
                         list.name,
                         style: TextStyle(
@@ -256,7 +250,7 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
                   const SizedBox(width: 8),
                   Flexible(
                     child: Text(
-                      isHindi ? '➕ नई सूची बनाएं (Pooja, Festival...)' : '➕ Create New Inventory List (Pooja, Festival...)',
+                      isHindi ? 'नई सूची बनाएं (Pooja, Festival...)' : 'Create New Inventory List (Pooja, Festival...)',
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -270,3 +264,4 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
     );
   }
 }
+

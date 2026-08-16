@@ -7,6 +7,7 @@ import '../services/localization_service.dart';
 
 class ItemDetailSheet extends StatefulWidget {
   final CatalogItem catalogItem;
+  final int inventoryId;
   final String? capturedPhotoPath;
   final AppLanguage language;
   final Function(InventoryItem item) onSave;
@@ -14,6 +15,7 @@ class ItemDetailSheet extends StatefulWidget {
   const ItemDetailSheet({
     super.key,
     required this.catalogItem,
+    this.inventoryId = 1,
     this.capturedPhotoPath,
     this.language = AppLanguage.english,
     required this.onSave,
@@ -57,7 +59,7 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
     final customName = _customNameController.text.trim();
 
     final item = InventoryItem(
-      inventoryId: 1,
+      inventoryId: widget.inventoryId,
       catalogId: widget.catalogItem.id,
       customName: customName.isNotEmpty ? customName : widget.catalogItem.nameEn,
       nameHi: widget.catalogItem.nameHi,

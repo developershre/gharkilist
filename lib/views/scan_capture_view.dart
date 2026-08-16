@@ -3,14 +3,18 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import '../models/inventory_item.dart';
-import 'catalog_browse_view.dart';
+import 'add_item_form_view.dart';
 
 class ScanCaptureView extends StatefulWidget {
-  final Function(InventoryItem item) onItemAdded;
+  final int inventoryId;
+  final Function(InventoryItem item)? onItemAdded;
+  final VoidCallback? onRefresh;
 
   const ScanCaptureView({
     super.key,
-    required this.onItemAdded,
+    this.inventoryId = 1,
+    this.onItemAdded,
+    this.onRefresh,
   });
 
   @override
@@ -34,14 +38,13 @@ class _ScanCaptureViewState extends State<ScanCaptureView> {
         _isProcessing = true;
       });
 
-      // Simulate fast Pre-AI image processing pipeline delay (300ms)
-      await Future.delayed(const Duration(milliseconds: 300));
+      await Future.delayed(const Duration(milliseconds: 200));
 
       if (mounted) {
         setState(() {
           _isProcessing = false;
         });
-        _navigateToCatalogWithPhoto(photo.path);
+        _navigateToFormWithPhoto(photo.path);
       }
     }
   }
@@ -56,17 +59,20 @@ class _ScanCaptureViewState extends State<ScanCaptureView> {
       setState(() {
         _capturedFile = photo;
       });
-      _navigateToCatalogWithPhoto(photo.path);
+      _navigateToFormWithPhoto(photo.path);
     }
   }
 
-  void _navigateToCatalogWithPhoto(String photoPath) {
+  void _navigateToFormWithPhoto(String photoPath) {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (context) => CatalogBrowseView(
-          capturedPhotoPath: photoPath,
-          onItemAdded: widget.onItemAdded,
+        builder: (context) => AddItemFormView(
+          inventoryId: widget.inventoryId,
+          initialPhotoPath: photoPath,
+          onItemAdded: () {
+            widget.onRefresh?.call();
+          },
         ),
       ),
     );

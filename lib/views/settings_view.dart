@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 import '../models/inventory_list.dart';
 import '../services/database_helper.dart';
 import '../services/localization_service.dart';
@@ -58,11 +57,15 @@ class _SettingsViewState extends State<SettingsView> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: Text(isHindi ? 'सूची के सारे सामान हटाएं?' : 'Clear All Items in List?', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            isHindi ? 'सूची के सारे सामान हटाएं?' : 'Clear All Items in List?',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           content: Text(
             isHindi
-                ? 'क्या आप "${widget.activeList.name}" से सभी $_itemCount सामान हटाना चाहते हैं?'
-                : 'Are you sure you want to remove all $_itemCount items from "${widget.activeList.name}"?',
+                ? 'क्या आप "${widget.activeList.name}" से सभी $_itemCount सामान हटाना चाहते हैं? यह क्रिया वापस नहीं ली जा सकती।'
+                : 'Are you sure you want to remove all $_itemCount items from "${widget.activeList.name}"? This action cannot be undone.',
             style: const TextStyle(fontSize: 14),
           ),
           actions: [
@@ -71,7 +74,11 @@ class _SettingsViewState extends State<SettingsView> {
               child: Text(isHindi ? 'रद्द करें' : 'Cancel'),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444), foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFEF4444),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
               onPressed: () async {
                 final db = await DatabaseHelper.instance.database;
                 await db.delete('inventory_items', where: 'inventory_id = ?', whereArgs: [widget.activeList.id]);
@@ -82,7 +89,10 @@ class _SettingsViewState extends State<SettingsView> {
                 _loadStats();
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(isHindi ? 'सूची के सारे सामान हट गए' : 'Cleared all items from list')),
+                    SnackBar(
+                      content: Text(isHindi ? 'सूची के सारे सामान हट गए' : 'Cleared all items from list'),
+                      backgroundColor: const Color(0xFFEF4444),
+                    ),
                   );
                 }
               },
@@ -102,387 +112,285 @@ class _SettingsViewState extends State<SettingsView> {
 
     final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
     final cardBgColor = isDark ? const Color(0xFF1E293B) : Colors.white;
-    final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1);
+    final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+    final primaryGreen = const Color(0xFF00C853);
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
 
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-        backgroundColor: bgColor,
+        backgroundColor: cardBgColor,
         elevation: 0,
+        scrolledUnderElevation: 0,
         title: Text(
-          isHindi ? 'ऐप सेटिंग्स' : 'Settings',
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          isHindi ? 'सेटिंग्स' : 'Settings',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor),
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
         children: [
-          // Section 1: App Theme (Default: System Theme)
-          Text(
-            isHindi ? 'दिखावट थीम' : 'App Theme',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Card(
-            elevation: 0,
-            color: cardBgColor,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: borderColor),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.palette_outlined, color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0EA5E9), size: 24),
-                      const SizedBox(width: 10),
-                      Text(
-                        isHindi ? 'थीम चुनें' : 'Select Theme',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildThemeSegment(
-                          label: isHindi ? 'सिस्टम' : 'System',
-                          mode: ThemeMode.system,
-                          isSelected: widget.themeMode == ThemeMode.system,
-                          activeColor: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0F172A),
+          // Section 1: Appearance & Language
+          _buildSectionHeader(isHindi ? 'दिखावट व भाषा' : 'Appearance & Language', subtextColor),
+          const SizedBox(height: 6),
+          _buildCardGroup(
+            cardBgColor: cardBgColor,
+            borderColor: borderColor,
+            children: [
+              // Theme selector row
+              Padding(
+                padding: const EdgeInsets.all(14.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.palette_outlined, color: primaryGreen, size: 20),
+                        const SizedBox(width: 10),
+                        Text(
+                          isHindi ? 'थीम' : 'Theme',
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: textColor),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildThemeSegment(
-                          label: isHindi ? 'लाइट' : 'Light',
-                          mode: ThemeMode.light,
-                          isSelected: widget.themeMode == ThemeMode.light,
-                          activeColor: const Color(0xFF0EA5E9),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildSegmentButton(
+                            label: isHindi ? 'सिस्टम' : 'System',
+                            isSelected: widget.themeMode == ThemeMode.system,
+                            onTap: () => widget.onSetThemeMode(ThemeMode.system),
+                            primaryGreen: primaryGreen,
+                            subtextColor: subtextColor,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildThemeSegment(
-                          label: isHindi ? 'डार्क' : 'Dark',
-                          mode: ThemeMode.dark,
-                          isSelected: widget.themeMode == ThemeMode.dark,
-                          activeColor: const Color(0xFF6366F1),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _buildSegmentButton(
+                            label: isHindi ? 'लाइट' : 'Light',
+                            isSelected: widget.themeMode == ThemeMode.light,
+                            onTap: () => widget.onSetThemeMode(ThemeMode.light),
+                            primaryGreen: primaryGreen,
+                            subtextColor: subtextColor,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _buildSegmentButton(
+                            label: isHindi ? 'डार्क' : 'Dark',
+                            isSelected: widget.themeMode == ThemeMode.dark,
+                            onTap: () => widget.onSetThemeMode(ThemeMode.dark),
+                            primaryGreen: primaryGreen,
+                            subtextColor: subtextColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
+              Divider(height: 1, color: borderColor),
+              // Language selector row
+              Padding(
+                padding: const EdgeInsets.all(14.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.language, color: primaryGreen, size: 20),
+                        const SizedBox(width: 10),
+                        Text(
+                          isHindi ? 'भाषा' : 'Language',
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: textColor),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildSegmentButton(
+                            label: 'English',
+                            isSelected: widget.language == AppLanguage.english,
+                            onTap: () => widget.onSetLanguage(AppLanguage.english),
+                            primaryGreen: primaryGreen,
+                            subtextColor: subtextColor,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _buildSegmentButton(
+                            label: 'हिंदी',
+                            isSelected: widget.language == AppLanguage.hindi,
+                            onTap: () => widget.onSetLanguage(AppLanguage.hindi),
+                            primaryGreen: primaryGreen,
+                            subtextColor: subtextColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 24),
 
-          // Section 2: Global App Language (Default: English)
-          Text(
-            isHindi ? 'भाषा' : 'Language',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Card(
-            elevation: 0,
-            color: cardBgColor,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: borderColor),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.language, color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7), size: 24),
-                      const SizedBox(width: 10),
-                      Text(
-                        isHindi ? 'भाषा चुनें' : 'Select Language',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildLangSegment(
-                          label: 'English',
-                          language: AppLanguage.english,
-                          isSelected: widget.language == AppLanguage.english,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildLangSegment(
-                          label: 'हिंदी (Hindi)',
-                          language: AppLanguage.hindi,
-                          isSelected: widget.language == AppLanguage.hindi,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 18),
 
-          // Section 3: Translator Tool Integration
-          Text(
-            isHindi ? 'अनुवादक (Translator Tool)' : 'Translator Tool',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Card(
-            elevation: 0,
-            color: cardBgColor,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: borderColor),
-            ),
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              leading: Icon(Icons.g_translate, color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7), size: 26),
-              title: Text(
-                isHindi ? 'हिंदी / English अनुवादक' : 'Hindi / English Translator',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          // Section 2: Preferences & Tools
+          _buildSectionHeader(isHindi ? 'प्राथमिकताएं व टूल' : 'Preferences & Tools', subtextColor),
+          const SizedBox(height: 6),
+          _buildCardGroup(
+            cardBgColor: cardBgColor,
+            borderColor: borderColor,
+            children: [
+              ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                leading: Icon(Icons.g_translate, color: primaryGreen, size: 22),
+                title: Text(
+                  isHindi ? 'हिंदी / English अनुवादक' : 'Translator Tool',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: textColor),
+                ),
+                subtitle: Text(
+                  isHindi ? 'किराना सामानों का नाम अनुवाद करें' : 'Translate Kirana item names',
+                  style: TextStyle(fontSize: 12, color: subtextColor),
+                ),
+                trailing: Icon(Icons.chevron_right, color: subtextColor, size: 20),
+                onTap: () {
+                  Navigator.pop(context);
+                  widget.onOpenTranslator();
+                },
               ),
-              subtitle: Text(
-                isHindi ? 'सामान का अनुवाद और खोजें' : 'Translate and convert item names',
-                style: const TextStyle(fontSize: 13, color: Colors.grey),
-              ),
-              trailing: Icon(Icons.chevron_right, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
-              onTap: () {
-                Navigator.pop(context);
-                widget.onOpenTranslator();
-              },
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Section 4: WhatsApp Export Settings
-          Text(
-            isHindi ? 'व्हाट्सएप सेटिंग्स' : 'WhatsApp Export Settings',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Card(
-            elevation: 0,
-            color: cardBgColor,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: borderColor),
-            ),
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              leading: Icon(Icons.currency_rupee, color: isDark ? const Color(0xFF4ADE80) : const Color(0xFF22C55E), size: 26),
-              title: Text(
-                isHindi ? 'व्हाट्सएप में दाम दिखाएं' : 'Include Prices in WhatsApp',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              subtitle: Text(
-                isHindi ? 'अनुमानित कुल खर्च मैसेज में जोड़ें' : 'Include estimated total budget',
-                style: const TextStyle(fontSize: 13, color: Colors.grey),
-              ),
-              trailing: Switch(
+              Divider(height: 1, color: borderColor),
+              SwitchListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                secondary: Icon(Icons.currency_rupee, color: primaryGreen, size: 22),
+                title: Text(
+                  isHindi ? 'WhatsApp शेयर में दाम शामिल करें' : 'Include Prices in WhatsApp Share',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: textColor),
+                ),
                 value: _includePricesInWhatsApp,
                 onChanged: (val) {
                   setState(() => _includePricesInWhatsApp = val);
                 },
-                activeThumbColor: const Color(0xFF22C55E),
+                activeThumbColor: primaryGreen,
               ),
-            ),
+            ],
           ),
-          const SizedBox(height: 24),
 
-          // Section 5: Storage & Active List Management
-          Text(
-            isHindi ? 'सूची जानकारी' : 'List Storage Status',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-            ),
+          const SizedBox(height: 18),
+
+          // Section 3: Data Management
+          _buildSectionHeader(isHindi ? 'डेटा प्रबंधन' : 'Data Management', subtextColor),
+          const SizedBox(height: 6),
+          _buildCardGroup(
+            cardBgColor: cardBgColor,
+            borderColor: borderColor,
+            children: [
+              ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                leading: const Icon(Icons.delete_sweep_outlined, color: Color(0xFFEF4444), size: 24),
+                title: Text(
+                  isHindi ? 'सूची के सभी सामान हटाएं' : 'Clear All Items in List',
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFFEF4444)),
+                ),
+                subtitle: Text(
+                  '${widget.activeList.name} (${_isLoading ? "..." : "$_itemCount"} ${isHindi ? "सामान" : "items"})',
+                  style: TextStyle(fontSize: 12, color: subtextColor),
+                ),
+                trailing: _isLoading
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : Icon(Icons.chevron_right, color: subtextColor, size: 20),
+                onTap: _itemCount > 0 ? _showClearListConfirmation : null,
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Card(
-            elevation: 0,
-            color: cardBgColor,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: borderColor),
-            ),
+
+          const SizedBox(height: 32),
+
+          // Footer info
+          Center(
             child: Column(
               children: [
-                ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  leading: Text(widget.activeList.iconEmoji, style: const TextStyle(fontSize: 28)),
-                  title: Text(widget.activeList.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  subtitle: _isLoading
-                      ? const Text('Loading items...')
-                      : Text('$_itemCount / ${DatabaseHelper.freeTierCap} items tracked', style: const TextStyle(fontSize: 13, color: Colors.grey)),
-                  trailing: ShadBadge(
-                    child: Text('$_itemCount Items'),
-                  ),
+                Text(
+                  'Bhandar Khata v1.0.0',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: subtextColor),
                 ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: Icon(Icons.delete_sweep, color: isDark ? const Color(0xFFF87171) : const Color(0xFFEF4444), size: 24),
-                  title: Text(
-                    isHindi ? 'सूची के सारे सामान हटाएं' : 'Clear Active List Items',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: isDark ? const Color(0xFFF87171) : const Color(0xFFEF4444)),
-                  ),
-                  subtitle: Text(
-                    isHindi ? 'इस सूची से सभी सामान हटाएं' : 'Remove all items from this list',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                  onTap: _itemCount > 0 ? _showClearListConfirmation : null,
+                const SizedBox(height: 2),
+                Text(
+                  isHindi ? '100% ऑफ़लाइन व सुरक्षित' : '100% Private & Offline',
+                  style: TextStyle(fontSize: 11, color: subtextColor.withValues(alpha: 0.7)),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 24),
-
-          // Section 6: About & Version Info (Official Production v1.0.0)
-          Text(
-            isHindi ? 'ऐप जानकारी' : 'About Bhandar Khata',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Card(
-            elevation: 0,
-            color: cardBgColor,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: borderColor),
-            ),
-            child: Column(
-              children: [
-                ListTile(
-                  leading: Icon(Icons.inventory_2_outlined, color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0EA5E9), size: 26),
-                  title: const Text('Bhandar Khata (भंडार खाता)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  subtitle: const Text(
-                    'Smart Household Pantry & Kirana Inventory Tracker for Indian Families',
-                    style: TextStyle(fontSize: 13),
-                  ),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: Icon(Icons.lock_outline, color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7), size: 22),
-                  title: Text(isHindi ? 'गोपनीयता (Privacy)' : 'Data Privacy', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                  subtitle: Text(
-                    isHindi ? '100% ऑफ़लाइन व सुरक्षित - आपका डाटा सिर्फ आपके फोन पर है' : '100% Offline & Private - All data stays on your phone',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: Icon(Icons.verified, color: isDark ? const Color(0xFF4ADE80) : const Color(0xFF22C55E), size: 22),
-                  title: const Text('Version', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                  trailing: Text(
-                    'v1.0.0 (Release Build)',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          const SizedBox(height: 16),
         ],
       ),
     );
   }
 
-  Widget _buildThemeSegment({
-    required String label,
-    required ThemeMode mode,
-    required bool isSelected,
-    required Color activeColor,
-  }) {
-    return InkWell(
-      onTap: () => widget.onSetThemeMode(mode),
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: isSelected ? activeColor : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isSelected ? activeColor : const Color(0xFFCBD5E1),
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-            color: isSelected ? Colors.white : const Color(0xFF64748B),
-          ),
-        ),
+  Widget _buildSectionHeader(String title, Color textColor) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 2),
+      child: Text(
+        title.toUpperCase(),
+        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: textColor, letterSpacing: 0.8),
       ),
     );
   }
 
-  Widget _buildLangSegment({
+  Widget _buildCardGroup({
+    required Color cardBgColor,
+    required Color borderColor,
+    required List<Widget> children,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: cardBgColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: borderColor),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: children,
+      ),
+    );
+  }
+
+  Widget _buildSegmentButton({
     required String label,
-    required AppLanguage language,
     required bool isSelected,
+    required VoidCallback onTap,
+    required Color primaryGreen,
+    required Color subtextColor,
   }) {
     return InkWell(
-      onTap: () => widget.onSetLanguage(language),
-      borderRadius: BorderRadius.circular(10),
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(vertical: 8),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF38BDF8) : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
+          color: isSelected ? primaryGreen : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected ? const Color(0xFF38BDF8) : const Color(0xFFCBD5E1),
+            color: isSelected ? primaryGreen : subtextColor.withValues(alpha: 0.3),
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 14,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-            color: isSelected ? Colors.white : const Color(0xFF64748B),
+            fontSize: 13,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            color: isSelected ? Colors.white : subtextColor,
           ),
         ),
       ),
     );
   }
 }
+

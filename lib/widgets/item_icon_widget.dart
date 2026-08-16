@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
@@ -5,6 +6,7 @@ class ItemIconWidget extends StatelessWidget {
   final String itemId;
   final String category;
   final String? emojiHint;
+  final String? capturedPhotoPath;
   final double size;
   final double iconSize;
   final Color? backgroundColor;
@@ -14,6 +16,7 @@ class ItemIconWidget extends StatelessWidget {
     required this.itemId,
     required this.category,
     this.emojiHint,
+    this.capturedPhotoPath,
     this.size = 48,
     this.iconSize = 22,
     this.backgroundColor,
@@ -148,6 +151,22 @@ class ItemIconWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (capturedPhotoPath != null && capturedPhotoPath!.isNotEmpty) {
+      final file = File(capturedPhotoPath!);
+      if (file.existsSync()) {
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.file(
+            file,
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => _buildIconFallback(context),
+          ),
+        );
+      }
+    }
+
     final assetPath = _getAssetImagePath();
     if (assetPath != null) {
       return ClipRRect(
