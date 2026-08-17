@@ -37,12 +37,20 @@ class GharkilistApp extends StatelessWidget {
       theme: ShadThemeData(
         brightness: Brightness.light,
         colorScheme: const ShadSlateColorScheme.light(),
-        textTheme: ShadTextTheme(family: GoogleFonts.inter().fontFamily),
+        textTheme: ShadTextTheme(
+          family: GoogleFonts.inter(
+            textStyle: const TextStyle(fontFamilyFallback: ['sans-serif', 'Roboto']),
+          ).fontFamily,
+        ),
       ),
       darkTheme: ShadThemeData(
         brightness: Brightness.dark,
         colorScheme: const ShadSlateColorScheme.dark(),
-        textTheme: ShadTextTheme(family: GoogleFonts.inter().fontFamily),
+        textTheme: ShadTextTheme(
+          family: GoogleFonts.inter(
+            textStyle: const TextStyle(fontFamilyFallback: ['sans-serif', 'Roboto']),
+          ).fontFamily,
+        ),
       ),
       themeMode: settings.themeMode,
       home: const MainHomeScreen(),

@@ -45,7 +45,7 @@ class InventoryItem {
       'category': category,
       'quantity': quantity,
       'unit': unit,
-      if (estimatedPrice != null) 'estimated_price': estimatedPrice,
+      'estimated_price': estimatedPrice,
       'display_order': displayOrder,
       'is_low': isLow ? 1 : 0,
       'is_out': isOut ? 1 : 0,

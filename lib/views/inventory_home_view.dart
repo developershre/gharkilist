@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+import '../models/catalog_item.dart';
 import '../models/inventory_item.dart';
 import '../models/inventory_list.dart';
 import '../services/database_helper.dart';
@@ -310,18 +311,35 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
   }
 
   void _editItem(InventoryItem item) {
-    if (item.catalogItem == null) return;
+    final catalog = item.catalogItem ??
+        CatalogItem(
+          id: item.catalogId,
+          nameEn: item.customName,
+          nameHi: item.nameHi.isNotEmpty ? item.nameHi : item.customName,
+          category: item.category,
+          categoryHi: item.category,
+          aliases: [item.customName],
+          defaultUnit: item.unit,
+          allowedUnits: [item.unit, 'KG', 'G', 'L', 'ML', 'PCS', 'PKT', 'BOTTLE', 'CAN', 'BOX', 'STRIP', 'SACHET'],
+          iconEmoji: '📦',
+        );
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => ItemDetailSheet(
-        catalogItem: item.catalogItem!,
+        catalogItem: catalog,
         existingItem: item,
+        inventoryId: item.inventoryId,
         capturedPhotoPath: item.capturedPhotoPath,
         language: widget.language,
         onSave: (updated) async {
-          final updatedWithId = updated.copyWith(id: item.id, inventoryId: item.inventoryId);
+          final updatedWithId = updated.copyWith(
+            id: item.id,
+            inventoryId: item.inventoryId,
+            catalogId: item.catalogId,
+          );
           await DatabaseHelper.instance.updateInventoryItem(updatedWithId);
           widget.onRefresh();
           if (context.mounted) Navigator.pop(context);

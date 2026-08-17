@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import '../data/indian_pantry_catalog.dart';
@@ -22,6 +23,10 @@ class DatabaseHelper {
 
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
+    final dbDir = Directory(dbPath);
+    if (!await dbDir.exists()) {
+      await dbDir.create(recursive: true);
+    }
     final pathString = join(dbPath, filePath);
 
     return await openDatabase(

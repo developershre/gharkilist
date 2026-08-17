@@ -90,15 +90,16 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
     final customName = _customNameController.text.trim();
 
     final item = InventoryItem(
+      id: widget.existingItem?.id,
       inventoryId: widget.inventoryId,
       catalogId: widget.catalogItem.id,
       customName: customName.isNotEmpty ? customName : widget.catalogItem.nameEn,
-      nameHi: widget.catalogItem.nameHi,
+      nameHi: widget.existingItem?.nameHi ?? widget.catalogItem.nameHi,
       category: widget.catalogItem.category,
       quantity: qty,
       unit: LocalizationService.normalizeUnit(_selectedUnit),
       estimatedPrice: price,
-      capturedPhotoPath: widget.capturedPhotoPath,
+      capturedPhotoPath: widget.capturedPhotoPath ?? widget.existingItem?.capturedPhotoPath,
       catalogItem: widget.catalogItem,
     );
 

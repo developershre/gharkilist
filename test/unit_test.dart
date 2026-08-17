@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:gharkilist/data/indian_pantry_catalog.dart';
+import 'package:gharkilist/providers/app_settings_provider.dart';
 import 'package:gharkilist/services/localization_service.dart';
 
 void main() {
@@ -41,6 +43,25 @@ void main() {
         expect(hiLabel.isNotEmpty, isTrue);
         expect(enLabel.isNotEmpty, isTrue);
       }
+    });
+  });
+
+  group('AppSettingsProvider Persistence Unit Tests', () {
+    test('setLanguage persists language preference to SharedPreferences', () async {
+      SharedPreferences.setMockInitialValues({});
+      final provider = AppSettingsProvider();
+      await provider.loadSettings();
+
+      expect(provider.language, equals(AppLanguage.english));
+
+      await provider.setLanguage(AppLanguage.hindi);
+      expect(provider.language, equals(AppLanguage.hindi));
+      expect(provider.isHindi, isTrue);
+
+      final newProvider = AppSettingsProvider();
+      await newProvider.loadSettings();
+      expect(newProvider.language, equals(AppLanguage.hindi));
+      expect(newProvider.isHindi, isTrue);
     });
   });
 }
