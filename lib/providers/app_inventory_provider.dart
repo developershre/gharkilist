@@ -13,6 +13,8 @@ class AppInventoryProvider extends ChangeNotifier {
   List<String> _catalogCategories = ['All'];
   bool _isInitialLoading = true;
   bool _isLoadingItems = false;
+  Map<String, List<InventoryItem>> _catalogIdToItemsAcrossLists = {};
+  Map<int, InventoryList> _listIdToList = {};
 
   InventoryList? get activeList => _activeList;
   List<InventoryList> get allLists => _allLists;
@@ -22,6 +24,8 @@ class AppInventoryProvider extends ChangeNotifier {
   List<String> get catalogCategories => _catalogCategories;
   bool get isInitialLoading => _isInitialLoading;
   bool get isLoadingItems => _isLoadingItems;
+  Map<String, List<InventoryItem>> get catalogIdToItemsAcrossLists => _catalogIdToItemsAcrossLists;
+  Map<int, InventoryList> get listIdToList => _listIdToList;
 
   /// Preloads database connection, master catalog, inventories, and initial list items.
   Future<void> preloadData() async {
@@ -58,6 +62,7 @@ class AppInventoryProvider extends ChangeNotifier {
         _inventoryItems = await db.getInventoryItemsForList(_activeList!.id!);
       }
       _allItemsAcrossLists = await db.getAllInventoryItemsAcrossAllLists();
+      _rebuildFastLookups();
     } catch (e) {
       debugPrint('Error preloading app inventory provider data: $e');
     } finally {
@@ -78,6 +83,7 @@ class AppInventoryProvider extends ChangeNotifier {
       _inventoryItems = [];
     }
     _allItemsAcrossLists = await DatabaseHelper.instance.getAllInventoryItemsAcrossAllLists();
+    _rebuildFastLookups();
 
     _isLoadingItems = false;
     notifyListeners();
@@ -88,13 +94,25 @@ class AppInventoryProvider extends ChangeNotifier {
     if (_activeList?.id == null) return;
     _inventoryItems = await DatabaseHelper.instance.getInventoryItemsForList(_activeList!.id!);
     _allItemsAcrossLists = await DatabaseHelper.instance.getAllInventoryItemsAcrossAllLists();
+    _rebuildFastLookups();
     notifyListeners();
   }
 
   /// Refreshes all inventory lists.
   Future<void> refreshAllLists() async {
     _allLists = await DatabaseHelper.instance.getAllInventories();
+    _rebuildFastLookups();
     notifyListeners();
+  }
+
+  void _rebuildFastLookups() {
+    _catalogIdToItemsAcrossLists = {};
+    for (final item in _allItemsAcrossLists) {
+      _catalogIdToItemsAcrossLists.putIfAbsent(item.catalogId, () => []).add(item);
+    }
+    _listIdToList = {
+      for (final list in _allLists) list.id ?? 0: list
+    };
   }
 
   /// Creates a new custom inventory list and switches to it.

@@ -303,133 +303,161 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
               ),
             ),
             const SizedBox(height: 8),
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: borderColor),
-                color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-              ),
-              padding: const EdgeInsets.all(12),
-              child: ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: widget.allLists.length,
-                separatorBuilder: (context, index) => Divider(color: borderColor, height: 16),
-                itemBuilder: (context, index) {
-                  final list = widget.allLists[index];
-                  final listId = list.id ?? 0;
-                  final isSelected = _selectedListsQuantities.containsKey(listId);
-                  final qty = _selectedListsQuantities[listId] ?? 1.0;
-                  final qtyStr = qty % 1 == 0 ? qty.toInt().toString() : qty.toString();
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 280),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: borderColor),
+                  color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                ),
+                padding: const EdgeInsets.all(12),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: widget.allLists.length,
+                  itemBuilder: (context, index) {
+                    final list = widget.allLists[index];
+                    final listId = list.id ?? 0;
+                    final isSelected = _selectedListsQuantities.containsKey(listId);
+                    final qty = _selectedListsQuantities[listId] ?? 1.0;
+                    final qtyStr = qty % 1 == 0 ? qty.toInt().toString() : qty.toString();
 
-                  return Row(
-                    children: [
-                      Checkbox(
-                        value: isSelected,
-                        activeColor: const Color(0xFF00C853),
-                        onChanged: (val) {
-                          setState(() {
-                            if (val == true) {
-                              _selectedListsQuantities[listId] = 1.0;
-                            } else {
-                              _selectedListsQuantities.remove(listId);
-                            }
-                          });
-                        },
-                      ),
-
-                      Expanded(
-                        child: Text(
-                          list.name,
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: isSelected ? textColor : subtextColor,
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          if (isSelected) {
+                            _selectedListsQuantities.remove(listId);
+                          } else {
+                            _selectedListsQuantities[listId] = 1.0;
+                          }
+                        });
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? const Color(0xFF00C853).withValues(alpha: 0.06)
+                              : cardBg,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: isSelected
+                                ? const Color(0xFF00C853).withValues(alpha: 0.4)
+                                : borderColor,
+                            width: 1.5,
                           ),
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                      if (isSelected) ...[
-                        Container(
-                          height: 34,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: borderColor),
-                            color: cardBg,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.remove, size: 14),
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                                onPressed: () {
-                                  if (qty > 1) {
-                                    setState(() {
-                                      _selectedListsQuantities[listId] = qty - 1;
-                                    });
-                                  }
-                                },
-                              ),
-                              SizedBox(
-                                width: 36,
-                                child: TextFormField(
-                                  initialValue: qtyStr,
-                                  key: ValueKey('qty_${listId}_$qtyStr'),
-                                  textAlign: TextAlign.center,
-                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                  style: TextStyle(
-                                    color: textColor,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  decoration: const InputDecoration(
-                                    border: InputBorder.none,
-                                    isDense: true,
-                                    contentPadding: EdgeInsets.zero,
-                                  ),
-                                  onChanged: (val) {
-                                    final d = double.tryParse(val);
-                                    if (d != null && d > 0) {
-                                      _selectedListsQuantities[listId] = d;
-                                    }
-                                  },
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 22,
+                              height: 22,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: isSelected ? const Color(0xFF00C853) : Colors.transparent,
+                                border: Border.all(
+                                  color: isSelected ? const Color(0xFF00C853) : subtextColor.withValues(alpha: 0.5),
+                                  width: 2,
                                 ),
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.add, size: 14),
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                                onPressed: () {
-                                  setState(() {
-                                    _selectedListsQuantities[listId] = qty + 1;
-                                  });
-                                },
+                              child: isSelected
+                                  ? const Icon(Icons.check, size: 14, color: Colors.white)
+                                  : null,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                list.name,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                                  color: isSelected ? textColor : subtextColor,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (isSelected) ...[
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: borderColor),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    _buildStepperButton(
+                                      icon: Icons.remove,
+                                      onPressed: () {
+                                        if (qty > 1) {
+                                          setState(() {
+                                            _selectedListsQuantities[listId] = qty - 1;
+                                          });
+                                        }
+                                      },
+                                      isDark: isDark,
+                                    ),
+                                    SizedBox(
+                                      width: 32,
+                                      child: TextFormField(
+                                        initialValue: qtyStr,
+                                        key: ValueKey('qty_${listId}_$qtyStr'),
+                                        textAlign: TextAlign.center,
+                                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                        style: TextStyle(
+                                          color: textColor,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        decoration: const InputDecoration(
+                                          border: InputBorder.none,
+                                          isDense: true,
+                                          contentPadding: EdgeInsets.zero,
+                                        ),
+                                        onChanged: (val) {
+                                          final d = double.tryParse(val);
+                                          if (d != null && d > 0) {
+                                            _selectedListsQuantities[listId] = d;
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                    _buildStepperButton(
+                                      icon: Icons.add,
+                                      onPressed: () {
+                                        setState(() {
+                                          _selectedListsQuantities[listId] = qty + 1;
+                                        });
+                                      },
+                                      isDark: isDark,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF00C853).withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  LocalizationService.getUnitLabel(_selectedUnit, widget.language).toUpperCase(),
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF00C853),
+                                  ),
+                                ),
                               ),
                             ],
-                          ),
+                          ],
                         ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            LocalizationService.getUnitLabel(_selectedUnit, widget.language).toUpperCase(),
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: subtextColor,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  );
-                },
+                      ),
+                    );
+                  },
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -558,6 +586,27 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStepperButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+    required bool isDark,
+  }) {
+    final iconColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(100),
+        child: Container(
+          width: 32,
+          height: 32,
+          alignment: Alignment.center,
+          child: Icon(icon, size: 16, color: iconColor),
         ),
       ),
     );

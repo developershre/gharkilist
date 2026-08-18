@@ -12,6 +12,8 @@ class DatabaseHelper {
 
   static const int freeTierCap = 15;
   List<CatalogItem>? _catalogCache;
+  List<String>? _categoriesCache;
+  final Map<String, List<CatalogItem>> _searchCache = {};
 
   DatabaseHelper._init();
 
@@ -139,6 +141,8 @@ class DatabaseHelper {
       await batch.commit(noResult: true);
     });
     _catalogCache = null;
+    _categoriesCache = null;
+    _searchCache.clear();
   }
 
   Future<void> _seedDefaultInventories(Database db) async {
@@ -193,7 +197,6 @@ class DatabaseHelper {
 
   Future<List<InventoryList>> getAllInventories() async {
     final db = await instance.database;
-    await _ensureTablesExist(db);
     try {
       final result = await db.query('pantry_inventories', orderBy: 'is_default DESC, id ASC');
       if (result.isEmpty) {
@@ -211,7 +214,6 @@ class DatabaseHelper {
 
   Future<InventoryList> createInventory(String name, String iconEmoji) async {
     final db = await instance.database;
-    await _ensureTablesExist(db);
     final id = await db.insert('pantry_inventories', {
       'name': name,
       'icon_emoji': iconEmoji,
@@ -223,7 +225,6 @@ class DatabaseHelper {
 
   Future<int> deleteInventory(int listId) async {
     final db = await instance.database;
-    await _ensureTablesExist(db);
     await db.delete('inventory_items', where: 'inventory_id = ?', whereArgs: [listId]);
     return await db.delete('pantry_inventories', where: 'id = ? AND is_default = 0', whereArgs: [listId]);
   }
@@ -240,6 +241,11 @@ class DatabaseHelper {
   }
 
   Future<List<CatalogItem>> searchCatalog(String query, {String? category}) async {
+    final cacheKey = '${category ?? 'All'}_${query.trim().toLowerCase()}';
+    if (_searchCache.containsKey(cacheKey)) {
+      return _searchCache[cacheKey]!;
+    }
+
     final allItems = await getAllCatalogItems();
     Iterable<CatalogItem> filtered = allItems;
 
@@ -247,28 +253,33 @@ class DatabaseHelper {
       filtered = filtered.where((item) => item.category == category);
     }
 
+    List<CatalogItem> results;
     if (query.trim().isEmpty) {
-      return filtered.toList();
+      results = filtered.toList();
+    } else {
+      final lower = query.trim().toLowerCase();
+      results = filtered.where((item) => item.matchesSearch(lower)).toList();
     }
 
-    final lower = query.trim().toLowerCase();
-    return filtered.where((item) => item.matchesSearch(lower)).toList();
+    _searchCache[cacheKey] = results;
+    return results;
   }
 
   Future<List<String>> getCatalogCategories() async {
+    if (_categoriesCache != null) return _categoriesCache!;
     final items = await getAllCatalogItems();
     final set = <String>{};
     for (final i in items) {
       set.add(i.category);
     }
-    return set.toList()..sort();
+    _categoriesCache = set.toList()..sort();
+    return _categoriesCache!;
   }
 
   // ==================== INVENTORY ITEM METHODS ====================
 
   Future<List<InventoryItem>> getInventoryItemsForList(int inventoryId) async {
     final db = await instance.database;
-    await _ensureTablesExist(db);
     try {
       final result = await db.rawQuery('''
         SELECT 
@@ -311,7 +322,6 @@ class DatabaseHelper {
 
   Future<List<InventoryItem>> getAllInventoryItemsAcrossAllLists() async {
     final db = await instance.database;
-    await _ensureTablesExist(db);
     try {
       final result = await db.rawQuery('''
         SELECT 
@@ -353,7 +363,6 @@ class DatabaseHelper {
 
   Future<int> getInventoryCountForList(int inventoryId) async {
     final db = await instance.database;
-    await _ensureTablesExist(db);
     final result = await db.rawQuery(
       'SELECT COUNT(*) as count FROM inventory_items WHERE inventory_id = ?',
       [inventoryId],
@@ -363,7 +372,6 @@ class DatabaseHelper {
 
   Future<InventoryItem> addInventoryItem(InventoryItem item) async {
     final db = await instance.database;
-    await _ensureTablesExist(db);
     final count = await getInventoryCountForList(item.inventoryId);
     final itemWithOrder = item.copyWith(displayOrder: count);
     final id = await db.insert('inventory_items', itemWithOrder.toMap());
@@ -372,7 +380,6 @@ class DatabaseHelper {
 
   Future<int> updateInventoryItem(InventoryItem item) async {
     final db = await instance.database;
-    await _ensureTablesExist(db);
     return await db.update(
       'inventory_items',
       item.toMap(),
@@ -402,7 +409,6 @@ class DatabaseHelper {
 
   Future<int> toggleStockStatus(int id, {bool? isLow, bool? isOut}) async {
     final db = await instance.database;
-    await _ensureTablesExist(db);
     final Map<String, dynamic> updates = {
       'updated_at': DateTime.now().toIso8601String(),
     };
@@ -419,7 +425,6 @@ class DatabaseHelper {
 
   Future<int> deleteInventoryItem(int id) async {
     final db = await instance.database;
-    await _ensureTablesExist(db);
     return await db.delete('inventory_items', where: 'id = ?', whereArgs: [id]);
   }
 }

@@ -703,10 +703,7 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
           item.nameHi,
           widget.language,
         );
-        final allAddedItems = inventory.allItemsAcrossLists.where((ii) => ii.catalogId == item.id).toList();
-        final activeListItems = inventory.inventoryItems.where((ii) => ii.catalogId == item.id).toList();
-        final isAddedToActive = activeListItems.isNotEmpty;
-        final existingItemInActive = isAddedToActive ? activeListItems.first : null;
+        final allAddedItems = inventory.catalogIdToItemsAcrossLists[item.id] ?? const [];
 
         return RepaintBoundary(
           child: Container(
@@ -727,106 +724,51 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                   size: 50,
                   iconSize: 24,
                 ),
-                title: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                title: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      displayName,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: textColor,
+                    Flexible(
+                      child: Text(
+                        displayName,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                          color: textColor,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     if (allAddedItems.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 4,
-                        children: allAddedItems.map((ii) {
-                          final matchingLists = inventory.allLists.where((l) => l.id == ii.inventoryId);
-                          final listInfo = matchingLists.isNotEmpty ? matchingLists.first : null;
-                          final listName = listInfo?.name ?? (widget.language == AppLanguage.hindi ? 'अज्ञात सूची' : 'Unknown List');
-                          final qtyStr = ii.quantity % 1 == 0 ? ii.quantity.toInt().toString() : ii.quantity.toString();
-                          final unitLabel = LocalizationService.getUnitLabel(ii.unit, widget.language);
-                          final isActiveList = ii.inventoryId == inventory.activeList?.id;
-
-                          return Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: isActiveList
-                                  ? const Color(0xFF00C853).withValues(alpha: 0.15)
-                                  : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: isActiveList
-                                    ? const Color(0xFF00C853).withValues(alpha: 0.3)
-                                    : (isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1)),
-                                width: 1,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  listName,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: isActiveList
-                                        ? const Color(0xFF00C853)
-                                        : (isDark ? const Color(0xFFE2E8F0) : const Color(0xFF475569)),
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '($qtyStr $unitLabel)',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w500,
-                                    color: isActiveList
-                                        ? const Color(0xFF00C853).withValues(alpha: 0.8)
-                                        : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
+                      Container(
+                        width: 20,
+                        height: 20,
+                        margin: const EdgeInsets.only(left: 8),
+                        alignment: Alignment.center,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF00C853),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          allAddedItems.length.toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ],
                   ],
                 ),
-                trailing: isAddedToActive
-                    ? Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '${existingItemInActive!.quantity % 1 == 0 ? existingItemInActive.quantity.toInt() : existingItemInActive.quantity} ${LocalizationService.getUnitLabel(existingItemInActive.unit, widget.language)}',
-                            style: TextStyle(
-                              color: subtextColor,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline, color: Color(0xFFEF4444), size: 24),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                            onPressed: () {
-                              if (existingItemInActive.id != null) {
-                                inventory.deleteInventoryItem(existingItemInActive.id!);
-                              }
-                            },
-                          ),
-                        ],
-                      )
-                    : Icon(
-                        Icons.add_circle_outline,
-                        color: isDark ? const Color(0xFF00C853) : const Color(0xFF000000),
-                        size: 26,
-                      ),
+                 subtitle: Text(
+                   isHindi ? item.categoryHi : item.category,
+                   style: TextStyle(color: subtextColor, fontSize: 13),
+                 ),
+                trailing: Icon(
+                  Icons.add,
+                  color: isDark ? const Color(0xFF00C853) : const Color(0xFF0F172A),
+                  size: 24,
+                ),
                 onTap: () {
                   final catalog = CatalogItem(
                     id: item.id,
