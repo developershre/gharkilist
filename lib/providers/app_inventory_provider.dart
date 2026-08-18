@@ -8,6 +8,7 @@ class AppInventoryProvider extends ChangeNotifier {
   InventoryList? _activeList;
   List<InventoryList> _allLists = [];
   List<InventoryItem> _inventoryItems = [];
+  List<InventoryItem> _allItemsAcrossLists = [];
   List<CatalogItem> _catalogItems = [];
   List<String> _catalogCategories = ['All'];
   bool _isInitialLoading = true;
@@ -16,6 +17,7 @@ class AppInventoryProvider extends ChangeNotifier {
   InventoryList? get activeList => _activeList;
   List<InventoryList> get allLists => _allLists;
   List<InventoryItem> get inventoryItems => _inventoryItems;
+  List<InventoryItem> get allItemsAcrossLists => _allItemsAcrossLists;
   List<CatalogItem> get catalogItems => _catalogItems;
   List<String> get catalogCategories => _catalogCategories;
   bool get isInitialLoading => _isInitialLoading;
@@ -55,6 +57,7 @@ class AppInventoryProvider extends ChangeNotifier {
       if (_activeList?.id != null) {
         _inventoryItems = await db.getInventoryItemsForList(_activeList!.id!);
       }
+      _allItemsAcrossLists = await db.getAllInventoryItemsAcrossAllLists();
     } catch (e) {
       debugPrint('Error preloading app inventory provider data: $e');
     } finally {
@@ -74,6 +77,7 @@ class AppInventoryProvider extends ChangeNotifier {
     } else {
       _inventoryItems = [];
     }
+    _allItemsAcrossLists = await DatabaseHelper.instance.getAllInventoryItemsAcrossAllLists();
 
     _isLoadingItems = false;
     notifyListeners();
@@ -83,6 +87,7 @@ class AppInventoryProvider extends ChangeNotifier {
   Future<void> refreshActiveInventory() async {
     if (_activeList?.id == null) return;
     _inventoryItems = await DatabaseHelper.instance.getInventoryItemsForList(_activeList!.id!);
+    _allItemsAcrossLists = await DatabaseHelper.instance.getAllInventoryItemsAcrossAllLists();
     notifyListeners();
   }
 
@@ -109,6 +114,8 @@ class AppInventoryProvider extends ChangeNotifier {
       if (fallback != null) {
         await switchActiveList(fallback);
       }
+    } else {
+      await refreshActiveInventory();
     }
   }
 
@@ -146,6 +153,74 @@ class AppInventoryProvider extends ChangeNotifier {
     _inventoryItems = List.from(items);
     notifyListeners();
     await DatabaseHelper.instance.updateItemsDisplayOrder(items);
+  }
+
+  /// Saves a catalog item to multiple inventory lists with the specified quantities.
+  Future<void> saveItemToLists({
+    required CatalogItem catalogItem,
+    required Map<int, double> listQuantities,
+    required String customName,
+    required String unit,
+    required double? estimatedPrice,
+    required String? capturedPhotoPath,
+  }) async {
+    final db = DatabaseHelper.instance;
+
+    // Get all existing items for this catalog item in the database
+    final rawItems = await db.database.then((database) => database.query(
+          'inventory_items',
+          where: 'catalog_id = ?',
+          whereArgs: [catalogItem.id],
+        ));
+    final existingItems = rawItems.map((r) => InventoryItem.fromMap(r)).toList();
+
+    // 1. Delete items from lists that are not in listQuantities anymore
+    for (final existing in existingItems) {
+      if (!listQuantities.containsKey(existing.inventoryId)) {
+        if (existing.id != null) {
+          await db.deleteInventoryItem(existing.id!);
+        }
+      }
+    }
+
+    // 2. Add or update items for lists in listQuantities
+    for (final entry in listQuantities.entries) {
+      final listId = entry.key;
+      final qty = entry.value;
+
+      final existing = existingItems.where((ii) => ii.inventoryId == listId).toList();
+      if (existing.isNotEmpty) {
+        // Update
+        final updated = existing.first.copyWith(
+          customName: customName,
+          unit: unit,
+          quantity: qty,
+          estimatedPrice: estimatedPrice,
+          capturedPhotoPath: capturedPhotoPath,
+          updatedAt: DateTime.now(),
+        );
+        await db.updateInventoryItem(updated);
+      } else {
+        // Add
+        final count = await db.getInventoryCountForList(listId);
+        final newItem = InventoryItem(
+          inventoryId: listId,
+          catalogId: catalogItem.id,
+          customName: customName,
+          nameHi: catalogItem.nameHi,
+          category: catalogItem.category,
+          quantity: qty,
+          unit: unit,
+          estimatedPrice: estimatedPrice,
+          displayOrder: count,
+          capturedPhotoPath: capturedPhotoPath,
+        );
+        await db.addInventoryItem(newItem);
+      }
+    }
+
+    // Refresh provider state
+    await refreshActiveInventory();
   }
 
   /// Search master catalog with optional category filtering.

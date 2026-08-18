@@ -64,7 +64,8 @@ class _TranslatorViewState extends State<TranslatorView> {
           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
       ),
-      body: Padding(
+      body: SafeArea(
+        child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -214,6 +215,7 @@ class _TranslatorViewState extends State<TranslatorView> {
           ],
         ),
       ),
+     ),
     );
   }
 }

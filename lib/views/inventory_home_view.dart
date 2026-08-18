@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+import '../providers/app_inventory_provider.dart';
 import '../models/catalog_item.dart';
 import '../models/inventory_item.dart';
 import '../models/inventory_list.dart';
@@ -13,6 +16,7 @@ import '../widgets/inventory_filter_sheet.dart';
 import '../widgets/inventory_item_tile.dart';
 import '../widgets/inventory_search_bar.dart';
 import '../widgets/inventory_tag_bar.dart';
+import '../widgets/item_icon_widget.dart';
 import 'add_item_form_view.dart';
 import 'item_detail_sheet.dart';
 
@@ -51,6 +55,8 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
   String _selectedCategoryFilter = 'All';
   String _selectedStockFilter = 'All';
   String _selectedSortOption = 'Default';
+  List<CatalogItem> _searchCatalogResults = [];
+  Timer? _debounceTimer;
 
   @override
   void initState() {
@@ -60,8 +66,29 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged(String query) {
+    if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 150), () async {
+      if (query.trim().isEmpty) {
+        setState(() {
+          _searchQuery = '';
+          _searchCatalogResults = [];
+        });
+      } else {
+        final results = await DatabaseHelper.instance.searchCatalog(
+          query.trim(),
+        );
+        setState(() {
+          _searchQuery = query;
+          _searchCatalogResults = results;
+        });
+      }
+    });
   }
 
   @override
@@ -324,29 +351,40 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
           iconEmoji: '📦',
         );
 
+    final inventory = context.read<AppInventoryProvider>();
+    final allAddedItems = inventory.allItemsAcrossLists.where((ii) => ii.catalogId == item.catalogId).toList();
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => ItemDetailSheet(
         catalogItem: catalog,
-        existingItem: item,
-        inventoryId: item.inventoryId,
+        existingItemsAcrossLists: allAddedItems,
+        allLists: widget.allLists,
+        activeInventoryId: widget.activeList.id ?? 1,
         capturedPhotoPath: item.capturedPhotoPath,
         language: widget.language,
-        onSave: (updated) async {
-          final updatedWithId = updated.copyWith(
-            id: item.id,
-            inventoryId: item.inventoryId,
-            catalogId: item.catalogId,
+        onSave: (customName, unit, price, listQuantities) async {
+          await inventory.saveItemToLists(
+            catalogItem: catalog,
+            listQuantities: listQuantities,
+            customName: customName,
+            unit: unit,
+            estimatedPrice: price,
+            capturedPhotoPath: item.capturedPhotoPath,
           );
-          await DatabaseHelper.instance.updateInventoryItem(updatedWithId);
           widget.onRefresh();
           if (context.mounted) Navigator.pop(context);
         },
-        onDelete: () {
+        onDelete: () async {
           Navigator.pop(context);
-          _deleteItem(item);
+          for (final existing in allAddedItems) {
+            if (existing.id != null) {
+              await DatabaseHelper.instance.deleteInventoryItem(existing.id!);
+            }
+          }
+          widget.onRefresh();
         },
       ),
     );
@@ -379,6 +417,7 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
 
   @override
   Widget build(BuildContext context) {
+    final inventory = context.watch<AppInventoryProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isHindi = widget.language == AppLanguage.hindi;
     final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
@@ -387,12 +426,13 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
 
     return Scaffold(
       backgroundColor: bgColor,
-      body: Column(
-        children: [
+      body: SafeArea(
+        child: Column(
+          children: [
           // Search Bar
           InventorySearchBar(
             controller: _searchController,
-            onChanged: (val) => setState(() => _searchQuery = val),
+            onChanged: _onSearchChanged,
             onFilterTap: _showFilterSheet,
             hasActiveFilters: _hasActiveFilters,
             language: widget.language,
@@ -448,14 +488,16 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
           ],
           const SizedBox(height: 12),
 
-          // Main Items List OR Empty Inventory Placeholder
+          // Main Items List OR Search Results OR Empty Inventory Placeholder
           Expanded(
-            child: displayItems.isEmpty
-                ? EmptyInventoryPlaceholder(
-                    listName: widget.activeList.name,
-                    language: widget.language,
-                    onAddItemTap: () => _showAddModal(context),
-                  )
+            child: _searchQuery.isNotEmpty
+                ? _buildSearchResultsList(context, inventory, isDark, isHindi, subtextColor)
+                : displayItems.isEmpty
+                    ? EmptyInventoryPlaceholder(
+                        listName: widget.activeList.name,
+                        language: widget.language,
+                        onAddItemTap: () => _showAddModal(context),
+                      )
                 : ReorderableListView.builder(
                     buildDefaultDragHandles: false,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -627,6 +669,216 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
           ),
         ],
       ),
+     ),
+    );
+  }
+
+  Widget _buildSearchResultsList(
+    BuildContext context,
+    AppInventoryProvider inventory,
+    bool isDark,
+    bool isHindi,
+    Color subtextColor,
+  ) {
+    if (_searchCatalogResults.isEmpty) {
+      return Center(
+        child: Text(
+          isHindi ? 'खोज के अनुसार कोई सामान नहीं मिला।' : 'No items found matching search.',
+          style: TextStyle(fontSize: 15, color: subtextColor),
+        ),
+      );
+    }
+
+    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1);
+    final textColor = isDark ? Colors.white : const Color(0xFF000000);
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      itemCount: _searchCatalogResults.length,
+      itemBuilder: (context, index) {
+        final item = _searchCatalogResults[index];
+        final displayName = LocalizationService.getItemName(
+          item.nameEn,
+          item.nameHi,
+          widget.language,
+        );
+        final allAddedItems = inventory.allItemsAcrossLists.where((ii) => ii.catalogId == item.id).toList();
+        final activeListItems = inventory.inventoryItems.where((ii) => ii.catalogId == item.id).toList();
+        final isAddedToActive = activeListItems.isNotEmpty;
+        final existingItemInActive = isAddedToActive ? activeListItems.first : null;
+
+        return RepaintBoundary(
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: Material(
+              color: cardBg,
+              clipBehavior: Clip.antiAlias,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+                side: BorderSide(color: borderColor),
+              ),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                leading: ItemIconWidget(
+                  itemId: item.id,
+                  category: item.category,
+                  emojiHint: item.iconEmoji,
+                  size: 50,
+                  iconSize: 24,
+                ),
+                title: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      displayName,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: textColor,
+                      ),
+                    ),
+                    if (allAddedItems.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: allAddedItems.map((ii) {
+                          final matchingLists = inventory.allLists.where((l) => l.id == ii.inventoryId);
+                          final listInfo = matchingLists.isNotEmpty ? matchingLists.first : null;
+                          final listName = listInfo?.name ?? (widget.language == AppLanguage.hindi ? 'अज्ञात सूची' : 'Unknown List');
+                          final qtyStr = ii.quantity % 1 == 0 ? ii.quantity.toInt().toString() : ii.quantity.toString();
+                          final unitLabel = LocalizationService.getUnitLabel(ii.unit, widget.language);
+                          final isActiveList = ii.inventoryId == inventory.activeList?.id;
+
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: isActiveList
+                                  ? const Color(0xFF00C853).withValues(alpha: 0.15)
+                                  : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: isActiveList
+                                    ? const Color(0xFF00C853).withValues(alpha: 0.3)
+                                    : (isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1)),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  listName,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: isActiveList
+                                        ? const Color(0xFF00C853)
+                                        : (isDark ? const Color(0xFFE2E8F0) : const Color(0xFF475569)),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '($qtyStr $unitLabel)',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w500,
+                                    color: isActiveList
+                                        ? const Color(0xFF00C853).withValues(alpha: 0.8)
+                                        : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ],
+                ),
+                trailing: isAddedToActive
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '${existingItemInActive!.quantity % 1 == 0 ? existingItemInActive.quantity.toInt() : existingItemInActive.quantity} ${LocalizationService.getUnitLabel(existingItemInActive.unit, widget.language)}',
+                            style: TextStyle(
+                              color: subtextColor,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline, color: Color(0xFFEF4444), size: 24),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: () {
+                              if (existingItemInActive.id != null) {
+                                inventory.deleteInventoryItem(existingItemInActive.id!);
+                              }
+                            },
+                          ),
+                        ],
+                      )
+                    : Icon(
+                        Icons.add_circle_outline,
+                        color: isDark ? const Color(0xFF00C853) : const Color(0xFF000000),
+                        size: 26,
+                      ),
+                onTap: () {
+                  final catalog = CatalogItem(
+                    id: item.id,
+                    nameEn: item.nameEn,
+                    nameHi: item.nameHi,
+                    category: item.category,
+                    categoryHi: item.categoryHi,
+                    aliases: item.aliases,
+                    defaultUnit: item.defaultUnit,
+                    allowedUnits: item.allowedUnits,
+                    iconEmoji: item.iconEmoji,
+                  );
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (context) => ItemDetailSheet(
+                      catalogItem: catalog,
+                      existingItemsAcrossLists: allAddedItems,
+                      allLists: inventory.allLists,
+                      activeInventoryId: inventory.activeList?.id ?? 1,
+                      capturedPhotoPath: null,
+                      language: widget.language,
+                      onSave: (customName, unit, price, listQuantities) async {
+                        await inventory.saveItemToLists(
+                          catalogItem: catalog,
+                          listQuantities: listQuantities,
+                          customName: customName,
+                          unit: unit,
+                          estimatedPrice: price,
+                          capturedPhotoPath: null,
+                        );
+                        widget.onRefresh();
+                        if (context.mounted) Navigator.pop(context);
+                      },
+                      onDelete: () async {
+                        Navigator.pop(context);
+                        for (final existing in allAddedItems) {
+                          if (existing.id != null) {
+                            await DatabaseHelper.instance.deleteInventoryItem(existing.id!);
+                          }
+                        }
+                        widget.onRefresh();
+                      },
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

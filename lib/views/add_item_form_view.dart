@@ -166,7 +166,8 @@ class _AddItemFormViewState extends State<AddItemFormView> {
           style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
         ),
       ),
-      body: SingleChildScrollView(
+      body: SafeArea(
+        child: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -505,6 +506,7 @@ class _AddItemFormViewState extends State<AddItemFormView> {
           ],
         ),
       ),
+     ),
     );
   }
 }

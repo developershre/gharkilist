@@ -85,19 +85,40 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
     });
   }
 
-  void _openItemDetail(CatalogItem item) {
+  void _openItemDetail(CatalogItem item, List<InventoryItem> existingItemsAcrossLists) {
+    final inventory = context.read<AppInventoryProvider>();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => ItemDetailSheet(
         catalogItem: item,
+        existingItemsAcrossLists: existingItemsAcrossLists,
+        allLists: inventory.allLists,
+        activeInventoryId: inventory.activeList?.id ?? 1,
         capturedPhotoPath: widget.capturedPhotoPath,
         language: widget.language,
-        onSave: (inventoryItem) {
-          widget.onItemAdded(inventoryItem);
-          Navigator.pop(context);
+        onSave: (customName, unit, price, listQuantities) async {
+          await inventory.saveItemToLists(
+            catalogItem: item,
+            listQuantities: listQuantities,
+            customName: customName,
+            unit: unit,
+            estimatedPrice: price,
+            capturedPhotoPath: widget.capturedPhotoPath,
+          );
+          if (context.mounted) Navigator.pop(context);
         },
+        onDelete: existingItemsAcrossLists.isNotEmpty
+            ? () async {
+                for (final existing in existingItemsAcrossLists) {
+                  if (existing.id != null) {
+                    await inventory.deleteInventoryItem(existing.id!);
+                  }
+                }
+                if (context.mounted) Navigator.pop(context);
+              }
+            : null,
       ),
     );
   }
@@ -128,6 +149,7 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
 
   @override
   Widget build(BuildContext context) {
+    final inventory = context.watch<AppInventoryProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isHindi = widget.language == AppLanguage.hindi;
     final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
@@ -158,8 +180,9 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
           const SizedBox(width: 6),
         ],
       ),
-      body: Column(
-        children: [
+      body: SafeArea(
+        child: Column(
+          children: [
           // Search Input Bar
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
@@ -283,6 +306,10 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
                             item.nameHi,
                             widget.language,
                           );
+                          final existingList = inventory.inventoryItems.where((ii) => ii.catalogId == item.id).toList();
+                          final isAdded = existingList.isNotEmpty;
+                          final existingItem = isAdded ? existingList.first : null;
+                          final allAddedItems = inventory.allItemsAcrossLists.where((ii) => ii.catalogId == item.id).toList();
 
                           return RepaintBoundary(
                             child: Container(
@@ -303,20 +330,107 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
                                     size: 50,
                                     iconSize: 24,
                                   ),
-                                  title: Text(
-                                    displayName,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18,
-                                      color: textColor,
-                                    ),
+                                  title: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        displayName,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 18,
+                                          color: textColor,
+                                        ),
+                                      ),
+                                      if (allAddedItems.isNotEmpty) ...[
+                                        const SizedBox(height: 6),
+                                        Wrap(
+                                          spacing: 6,
+                                          runSpacing: 4,
+                                          children: allAddedItems.map((ii) {
+                                            final matchingLists = inventory.allLists.where((l) => l.id == ii.inventoryId);
+                                            final listInfo = matchingLists.isNotEmpty ? matchingLists.first : null;
+                                            final listName = listInfo?.name ?? (widget.language == AppLanguage.hindi ? 'अज्ञात सूची' : 'Unknown List');
+                                            final qtyStr = ii.quantity % 1 == 0 ? ii.quantity.toInt().toString() : ii.quantity.toString();
+                                            final unitLabel = LocalizationService.getUnitLabel(ii.unit, widget.language);
+                                            final isActiveList = ii.inventoryId == inventory.activeList?.id;
+
+                                            return Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                              decoration: BoxDecoration(
+                                                color: isActiveList
+                                                    ? const Color(0xFF00C853).withValues(alpha: 0.15)
+                                                    : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                                                borderRadius: BorderRadius.circular(6),
+                                                border: Border.all(
+                                                  color: isActiveList
+                                                      ? const Color(0xFF00C853).withValues(alpha: 0.3)
+                                                      : (isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1)),
+                                                  width: 1,
+                                                ),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Text(
+                                                    listName,
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: isActiveList
+                                                          ? const Color(0xFF00C853)
+                                                          : (isDark ? const Color(0xFFE2E8F0) : const Color(0xFF475569)),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    '($qtyStr $unitLabel)',
+                                                    style: TextStyle(
+                                                      fontSize: 10,
+                                                      fontWeight: FontWeight.w500,
+                                                      color: isActiveList
+                                                          ? const Color(0xFF00C853).withValues(alpha: 0.8)
+                                                          : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          }).toList(),
+                                        ),
+                                      ],
+                                    ],
                                   ),
-                                  trailing: Icon(
-                                    Icons.add_circle_outline,
-                                    color: isDark ? const Color(0xFF00C853) : const Color(0xFF000000),
-                                    size: 26,
-                                  ),
-                                  onTap: () => _openItemDetail(item),
+                                  trailing: isAdded
+                                      ? Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              '${existingItem!.quantity % 1 == 0 ? existingItem.quantity.toInt() : existingItem.quantity} ${LocalizationService.getUnitLabel(existingItem.unit, widget.language)}',
+                                              style: TextStyle(
+                                                color: subtextColor,
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            IconButton(
+                                              icon: const Icon(Icons.delete_outline, color: Color(0xFFEF4444), size: 24),
+                                              padding: EdgeInsets.zero,
+                                              constraints: const BoxConstraints(),
+                                              onPressed: () {
+                                                if (existingItem.id != null) {
+                                                  inventory.deleteInventoryItem(existingItem.id!);
+                                                }
+                                              },
+                                            ),
+                                          ],
+                                        )
+                                      : Icon(
+                                          Icons.add_circle_outline,
+                                          color: isDark ? const Color(0xFF00C853) : const Color(0xFF000000),
+                                          size: 26,
+                                        ),
+                                  onTap: () => _openItemDetail(item, allAddedItems),
                                 ),
                               ),
                             ),
@@ -326,6 +440,7 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
           ),
         ],
       ),
+     ),
     );
   }
 }

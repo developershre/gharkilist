@@ -124,9 +124,10 @@ class _SettingsViewState extends State<SettingsView> {
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor),
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-        children: [
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+          children: [
           // Section 1: Appearance & Language
           _buildSectionHeader(isHindi ? 'दिखावट व भाषा' : 'Appearance & Language', subtextColor),
           const SizedBox(height: 6),
@@ -326,6 +327,7 @@ class _SettingsViewState extends State<SettingsView> {
           const SizedBox(height: 16),
         ],
       ),
+     ),
     );
   }
 

@@ -52,6 +52,22 @@ class InventorySearchBar extends StatelessWidget {
                 ),
               ),
             ),
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: controller,
+              builder: (context, value, child) {
+                if (value.text.isEmpty) return const SizedBox.shrink();
+                return GestureDetector(
+                  onTap: () {
+                    controller.clear();
+                    onChanged('');
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: Icon(Icons.close, color: subtextColor, size: 18),
+                  ),
+                );
+              },
+            ),
             InkWell(
               onTap: onFilterTap,
               borderRadius: BorderRadius.circular(6),

@@ -309,6 +309,48 @@ class DatabaseHelper {
     }
   }
 
+  Future<List<InventoryItem>> getAllInventoryItemsAcrossAllLists() async {
+    final db = await instance.database;
+    await _ensureTablesExist(db);
+    try {
+      final result = await db.rawQuery('''
+        SELECT 
+          i.*,
+          c.name_en AS c_name_en,
+          c.name_hi AS c_name_hi,
+          c.category AS c_category,
+          c.category_hi AS c_category_hi,
+          c.aliases AS c_aliases,
+          c.default_unit AS c_default_unit,
+          c.allowed_units AS c_allowed_units,
+          c.icon_emoji AS c_icon_emoji
+        FROM inventory_items i
+        LEFT JOIN catalog_items c ON i.catalog_id = c.id
+        ORDER BY i.display_order ASC, i.is_out DESC, i.is_low DESC, i.updated_at DESC
+      ''');
+
+      return result.map((row) {
+        CatalogItem? cat;
+        if (row['c_name_en'] != null) {
+          cat = CatalogItem(
+            id: row['catalog_id'] as String,
+            nameEn: row['c_name_en'] as String,
+            nameHi: row['c_name_hi'] as String,
+            category: row['c_category'] as String,
+            categoryHi: row['c_category_hi'] as String,
+            aliases: (row['c_aliases'] as String).split(','),
+            defaultUnit: row['c_default_unit'] as String,
+            allowedUnits: (row['c_allowed_units'] as String).split(','),
+            iconEmoji: row['c_icon_emoji'] as String? ?? '📦',
+          );
+        }
+        return InventoryItem.fromMap(row, catalogItem: cat);
+      }).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
   Future<int> getInventoryCountForList(int inventoryId) async {
     final db = await instance.database;
     await _ensureTablesExist(db);

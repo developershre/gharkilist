@@ -128,7 +128,8 @@ class _ScanCaptureViewState extends State<ScanCaptureView> {
           const SizedBox(width: 6),
         ],
       ),
-      body: Padding(
+      body: SafeArea(
+        child: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           children: [
@@ -233,6 +234,7 @@ class _ScanCaptureViewState extends State<ScanCaptureView> {
           ],
         ),
       ),
+     ),
     );
   }
 }

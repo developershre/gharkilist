@@ -40,10 +40,10 @@ flutter:
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "assets/icon/adaptive-logo.png"
+  image_path: "assets/icon/adaptive_android_logo.png"
   min_sdk_android: 24
   adaptive_icon_background: "#ffffff"
-  adaptive_icon_foreground: "assets/icon/adaptive-logo.png"
-  monochrome_image: "assets/icon/adaptive-logo-monochrome.png"
+  adaptive_icon_foreground: "assets/icon/adaptive_android_logo.png"
+  monochrome_image: "assets/icon/adaptive_android_monochrome_logo.png"
   remove_alpha_ios: true
 

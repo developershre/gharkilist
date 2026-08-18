@@ -2,22 +2,30 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/catalog_item.dart';
 import '../models/inventory_item.dart';
+import '../models/inventory_list.dart';
 import '../services/localization_service.dart';
 
 class ItemDetailSheet extends StatefulWidget {
   final CatalogItem catalogItem;
-  final InventoryItem? existingItem;
-  final int inventoryId;
+  final List<InventoryItem> existingItemsAcrossLists;
+  final List<InventoryList> allLists;
+  final int activeInventoryId;
   final String? capturedPhotoPath;
   final AppLanguage language;
-  final Function(InventoryItem item) onSave;
+  final Function(
+    String customName,
+    String unit,
+    double? price,
+    Map<int, double> listQuantities,
+  ) onSave;
   final VoidCallback? onDelete;
 
   const ItemDetailSheet({
     super.key,
     required this.catalogItem,
-    this.existingItem,
-    this.inventoryId = 1,
+    required this.existingItemsAcrossLists,
+    required this.allLists,
+    this.activeInventoryId = 1,
     this.capturedPhotoPath,
     this.language = AppLanguage.english,
     required this.onSave,
@@ -30,9 +38,9 @@ class ItemDetailSheet extends StatefulWidget {
 
 class _ItemDetailSheetState extends State<ItemDetailSheet> {
   late TextEditingController _customNameController;
-  late TextEditingController _quantityController;
   late TextEditingController _priceController;
   late String _selectedUnit;
+  late Map<int, double> _selectedListsQuantities;
 
   List<String> get _availableUnits {
     final set = <String>{};
@@ -50,8 +58,11 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
   @override
   void initState() {
     super.initState();
-    final displayName = widget.existingItem != null
-        ? widget.existingItem!.customName
+    final hasExisting = widget.existingItemsAcrossLists.isNotEmpty;
+    final primaryExistingItem = hasExisting ? widget.existingItemsAcrossLists.first : null;
+
+    final displayName = primaryExistingItem != null
+        ? primaryExistingItem.customName
         : LocalizationService.getItemName(
             widget.catalogItem.nameEn,
             widget.catalogItem.nameHi,
@@ -59,51 +70,42 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
           );
 
     _customNameController = TextEditingController(text: displayName);
-    _quantityController = TextEditingController(
-      text: widget.existingItem != null
-          ? (widget.existingItem!.quantity % 1 == 0
-              ? widget.existingItem!.quantity.toInt().toString()
-              : widget.existingItem!.quantity.toString())
-          : '1',
-    );
+    final estPrice = primaryExistingItem?.estimatedPrice;
     _priceController = TextEditingController(
-      text: widget.existingItem?.estimatedPrice != null
-          ? (widget.existingItem!.estimatedPrice! % 1 == 0
-              ? widget.existingItem!.estimatedPrice!.toInt().toString()
-              : widget.existingItem!.estimatedPrice!.toString())
+      text: estPrice != null
+          ? (estPrice % 1 == 0 ? estPrice.toInt().toString() : estPrice.toString())
           : '',
     );
-    _selectedUnit = widget.existingItem?.unit ?? widget.catalogItem.defaultUnit;
+    _selectedUnit = primaryExistingItem?.unit ?? widget.catalogItem.defaultUnit;
+
+    // Initialize list quantities
+    _selectedListsQuantities = {};
+    if (hasExisting) {
+      for (final item in widget.existingItemsAcrossLists) {
+        _selectedListsQuantities[item.inventoryId] = item.quantity;
+      }
+    } else {
+      _selectedListsQuantities[widget.activeInventoryId] = 1.0;
+    }
   }
 
   @override
   void dispose() {
     _customNameController.dispose();
-    _quantityController.dispose();
     _priceController.dispose();
     super.dispose();
   }
 
   void _handleSave() {
-    final qty = double.tryParse(_quantityController.text) ?? 1.0;
     final price = double.tryParse(_priceController.text);
     final customName = _customNameController.text.trim();
 
-    final item = InventoryItem(
-      id: widget.existingItem?.id,
-      inventoryId: widget.inventoryId,
-      catalogId: widget.catalogItem.id,
-      customName: customName.isNotEmpty ? customName : widget.catalogItem.nameEn,
-      nameHi: widget.existingItem?.nameHi ?? widget.catalogItem.nameHi,
-      category: widget.catalogItem.category,
-      quantity: qty,
-      unit: LocalizationService.normalizeUnit(_selectedUnit),
-      estimatedPrice: price,
-      capturedPhotoPath: widget.capturedPhotoPath ?? widget.existingItem?.capturedPhotoPath,
-      catalogItem: widget.catalogItem,
+    widget.onSave(
+      customName.isNotEmpty ? customName : widget.catalogItem.nameEn,
+      LocalizationService.normalizeUnit(_selectedUnit),
+      price,
+      _selectedListsQuantities,
     );
-
-    widget.onSave(item);
   }
 
   @override
@@ -238,81 +240,15 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
             ),
             const SizedBox(height: 16),
 
-            // Quantity & Unit Input Row
+            // Unit Input (Global)
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Quantity Stepper & Input
                 Expanded(
-                  flex: 3,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isHindi ? 'मात्रा' : 'Quantity',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: textColor,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: borderColor),
-                        ),
-                        child: Row(
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.remove, size: 20),
-                              onPressed: () {
-                                final current = double.tryParse(_quantityController.text) ?? 1.0;
-                                if (current > 1) {
-                                  final next = current - 1;
-                                  _quantityController.text = next % 1 == 0 ? next.toInt().toString() : next.toString();
-                                }
-                              },
-                            ),
-                            Expanded(
-                              child: TextField(
-                                controller: _quantityController,
-                                textAlign: TextAlign.center,
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                style: TextStyle(
-                                  color: textColor,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                decoration: const InputDecoration(
-                                  border: InputBorder.none,
-                                  isDense: true,
-                                ),
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.add, size: 20),
-                              onPressed: () {
-                                final current = double.tryParse(_quantityController.text) ?? 1.0;
-                                final next = current + 1;
-                                _quantityController.text = next % 1 == 0 ? next.toInt().toString() : next.toString();
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 14),
-                // Unit Dropdown Selector
-                Expanded(
-                  flex: 2,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        isHindi ? 'इकाई' : 'Unit',
+                        isHindi ? 'इकाई (मात्रा का प्रकार)' : 'Unit (Type of Quantity)',
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
@@ -354,6 +290,147 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 16),
+
+            // Select Lists & Quantities section
+            Text(
+              isHindi ? 'लिस्ट और मात्रा चुनें' : 'Select Lists & Quantities',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: textColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: borderColor),
+                color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+              ),
+              padding: const EdgeInsets.all(12),
+              child: ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: widget.allLists.length,
+                separatorBuilder: (context, index) => Divider(color: borderColor, height: 16),
+                itemBuilder: (context, index) {
+                  final list = widget.allLists[index];
+                  final listId = list.id ?? 0;
+                  final isSelected = _selectedListsQuantities.containsKey(listId);
+                  final qty = _selectedListsQuantities[listId] ?? 1.0;
+                  final qtyStr = qty % 1 == 0 ? qty.toInt().toString() : qty.toString();
+
+                  return Row(
+                    children: [
+                      Checkbox(
+                        value: isSelected,
+                        activeColor: const Color(0xFF00C853),
+                        onChanged: (val) {
+                          setState(() {
+                            if (val == true) {
+                              _selectedListsQuantities[listId] = 1.0;
+                            } else {
+                              _selectedListsQuantities.remove(listId);
+                            }
+                          });
+                        },
+                      ),
+
+                      Expanded(
+                        child: Text(
+                          list.name,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: isSelected ? textColor : subtextColor,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (isSelected) ...[
+                        Container(
+                          height: 34,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: borderColor),
+                            color: cardBg,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.remove, size: 14),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                onPressed: () {
+                                  if (qty > 1) {
+                                    setState(() {
+                                      _selectedListsQuantities[listId] = qty - 1;
+                                    });
+                                  }
+                                },
+                              ),
+                              SizedBox(
+                                width: 36,
+                                child: TextFormField(
+                                  initialValue: qtyStr,
+                                  key: ValueKey('qty_${listId}_$qtyStr'),
+                                  textAlign: TextAlign.center,
+                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                  style: TextStyle(
+                                    color: textColor,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  decoration: const InputDecoration(
+                                    border: InputBorder.none,
+                                    isDense: true,
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                  onChanged: (val) {
+                                    final d = double.tryParse(val);
+                                    if (d != null && d > 0) {
+                                      _selectedListsQuantities[listId] = d;
+                                    }
+                                  },
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.add, size: 14),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                onPressed: () {
+                                  setState(() {
+                                    _selectedListsQuantities[listId] = qty + 1;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            LocalizationService.getUnitLabel(_selectedUnit, widget.language).toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: subtextColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  );
+                },
+              ),
             ),
             const SizedBox(height: 16),
 
@@ -417,9 +494,9 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-                onPressed: _handleSave,
+                onPressed: _selectedListsQuantities.isNotEmpty ? _handleSave : null,
                 child: Text(
-                  widget.existingItem != null
+                  widget.existingItemsAcrossLists.isNotEmpty
                       ? (isHindi ? 'सामान अपडेट करें' : 'Update Inventory Item')
                       : (isHindi ? 'सूची में सहेजें' : 'Save to Inventory'),
                   style: const TextStyle(
@@ -429,7 +506,7 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
                 ),
               ),
             ),
-            if (widget.onDelete != null) ...[
+            if (widget.existingItemsAcrossLists.isNotEmpty && widget.onDelete != null) ...[
               const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
@@ -449,8 +526,8 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
                         title: Text(isHindi ? 'आइटम हटाएं?' : 'Delete Item?'),
                         content: Text(
                           isHindi
-                              ? 'क्या आप इसे लिस्ट से हटाना चाहते हैं?'
-                              : 'Are you sure you want to remove this item from your inventory?',
+                              ? 'क्या आप इसे सभी लिस्ट से हटाना चाहते हैं?'
+                              : 'Are you sure you want to remove this item from all your inventories?',
                         ),
                         actions: [
                           TextButton(
