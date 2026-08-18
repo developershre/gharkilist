@@ -12,6 +12,9 @@ class InventoryItemTile extends StatelessWidget {
   final VoidCallback onQuantityTap;
   final ValueChanged<String> onUnitChanged;
   final VoidCallback onDeleteTap;
+  final VoidCallback? onLongPress;
+  final bool isSelected;
+  final bool isSelectionMode;
 
   const InventoryItemTile({
     super.key,
@@ -23,6 +26,9 @@ class InventoryItemTile extends StatelessWidget {
     required this.onQuantityTap,
     required this.onUnitChanged,
     required this.onDeleteTap,
+    this.onLongPress,
+    this.isSelected = false,
+    this.isSelectionMode = false,
   });
 
   @override
@@ -33,7 +39,9 @@ class InventoryItemTile extends StatelessWidget {
         ? const Color(0xFF334155)
         : const Color(0xFF334155).withValues(alpha: 0.2);
     final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
-    final subtextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569);
+    final subtextColor = isDark
+        ? const Color(0xFF94A3B8)
+        : const Color(0xFF475569);
     final primaryGreen = const Color(0xFF008744);
     final deleteRed = const Color(0xFFC62828);
 
@@ -70,23 +78,41 @@ class InventoryItemTile extends StatelessWidget {
       ),
       child: InkWell(
         onTap: onTap,
+        onLongPress: onLongPress,
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           child: Row(
             children: [
-              // 6-dot Drag Handle
-              ReorderableDragStartListener(
-                index: index,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                  child: Icon(
-                    Icons.drag_indicator,
-                    color: isDark ? const Color(0xFF64748B) : const Color(0xFF475569),
-                    size: 24,
+              // Checkbox or 6-dot Drag Handle
+              if (isSelectionMode)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: Checkbox(
+                    value: isSelected,
+                    activeColor: primaryGreen,
+                    onChanged: (val) {
+                      onTap();
+                    },
+                  ),
+                )
+              else
+                ReorderableDragStartListener(
+                  index: index,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 8,
+                    ),
+                    child: Icon(
+                      Icons.drag_indicator,
+                      color: isDark
+                          ? const Color(0xFF64748B)
+                          : const Color(0xFF475569),
+                      size: 24,
+                    ),
                   ),
                 ),
-              ),
               const SizedBox(width: 12),
 
               // Item Image / Icon
@@ -117,10 +143,82 @@ class InventoryItemTile extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
-                    GestureDetector(
-                      onTap: onQuantityTap,
-                      child: Text(
+                    const SizedBox(height: 6),
+                    if (!isSelectionMode)
+                      Container(
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF334155).withValues(alpha: 0.3) : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                            width: 1,
+                          ),
+                        ),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              GestureDetector(
+                                onTap: () {
+                                  if (item.quantity > 0) {
+                                    double val = item.quantity - 1;
+                                    if (val < 0) val = 0;
+                                    onQuantityChanged(val);
+                                  }
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                                  child: Icon(
+                                    Icons.remove,
+                                    size: 14,
+                                    color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                                  ),
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: onQuantityTap,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                                  decoration: BoxDecoration(
+                                    border: Border.symmetric(
+                                      vertical: BorderSide(
+                                        color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                                        width: 1,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    '$qtyDisplay $unitDisplay',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () {
+                                  double val = item.quantity + 1;
+                                  onQuantityChanged(val);
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                                  child: Icon(
+                                    Icons.add,
+                                    size: 14,
+                                    color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
+                      Text(
                         '$qtyDisplay $unitDisplay',
                         style: TextStyle(
                           fontSize: 16,
@@ -128,42 +226,46 @@ class InventoryItemTile extends StatelessWidget {
                           color: subtextColor,
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),
 
-              // Right Action Buttons: Green Edit & Red Delete
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: Icon(
-                      Icons.edit_square,
-                      color: primaryGreen,
-                      size: 26,
+              // Right Action Buttons (Hidden in selection mode)
+              if (!isSelectionMode)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: Icon(
+                        Icons.edit_square,
+                        color: primaryGreen,
+                        size: 26,
+                      ),
+                      tooltip: language == AppLanguage.hindi
+                          ? 'संपादित करें'
+                          : 'Edit Item',
+                      padding: const EdgeInsets.all(6),
+                      constraints: const BoxConstraints(),
+                      onPressed: onTap,
                     ),
-                    tooltip: language == AppLanguage.hindi ? 'संपादित करें' : 'Edit Item',
-                    padding: const EdgeInsets.all(6),
-                    constraints: const BoxConstraints(),
-                    onPressed: onTap,
-                  ),
 
-                  const SizedBox(width: 6),
+                    const SizedBox(width: 6),
 
-                  IconButton(
-                    icon: Icon(
-                      Icons.delete_outline,
-                      color: deleteRed,
-                      size: 26,
+                    IconButton(
+                      icon: Icon(
+                        Icons.delete_outline,
+                        color: deleteRed,
+                        size: 26,
+                      ),
+                      tooltip: language == AppLanguage.hindi
+                          ? 'हटाएं'
+                          : 'Delete Item',
+                      padding: const EdgeInsets.all(6),
+                      constraints: const BoxConstraints(),
+                      onPressed: onDeleteTap,
                     ),
-                    tooltip: language == AppLanguage.hindi ? 'हटाएं' : 'Delete Item',
-                    padding: const EdgeInsets.all(6),
-                    constraints: const BoxConstraints(),
-                    onPressed: onDeleteTap,
-                  ),
-                ],
-              ),
+                  ],
+                ),
             ],
           ),
         ),

@@ -17,7 +17,9 @@ class EmptyInventoryPlaceholder extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? Colors.white : const Color(0xFF000000);
-    final subtextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final subtextColor = isDark
+        ? const Color(0xFF94A3B8)
+        : const Color(0xFF64748B);
     final displayListName = LocalizationService.getListName(listName, language);
 
     return Center(
@@ -63,14 +65,22 @@ class EmptyInventoryPlaceholder extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF00C853),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
               onPressed: onAddItemTap,
               icon: const Icon(Icons.add, size: 20),
               label: Text(
                 language == AppLanguage.hindi ? 'सामान जोड़ें' : 'Add Item',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
               ),
             ),
           ],
@@ -113,7 +123,9 @@ class DashedRectBorderPainter extends CustomPainter {
     for (final metric in metrics) {
       double distance = 0.0;
       while (distance < metric.length) {
-        final len = (distance + dash < metric.length) ? dash : metric.length - distance;
+        final len = (distance + dash < metric.length)
+            ? dash
+            : metric.length - distance;
         canvas.drawPath(metric.extractPath(distance, distance + len), paint);
         distance += len + gap;
       }

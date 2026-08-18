@@ -38,6 +38,18 @@ android {
             )
         }
     }
+
+    applicationVariants.all {
+        val variant = this
+        outputs.all {
+            val output = this as com.android.build.gradle.api.ApkVariantOutput
+            val envName = System.getenv("APK_NAME")
+            val envVersion = System.getenv("APK_VERSION")
+            val customName = if (!envName.isNullOrEmpty()) envName else (if (project.hasProperty("apkName")) project.property("apkName") as String else "gharkilist")
+            val customVersion = if (!envVersion.isNullOrEmpty()) envVersion else (if (project.hasProperty("apkVersion")) project.property("apkVersion") as String else variant.versionName)
+            output.outputFileName = "$customName-v$customVersion.apk"
+        }
+    }
 }
 
 kotlin {

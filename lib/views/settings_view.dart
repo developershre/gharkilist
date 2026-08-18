@@ -1,5 +1,10 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../models/inventory_list.dart';
 import '../providers/app_inventory_provider.dart';
 import '../providers/app_settings_provider.dart';
@@ -40,6 +45,169 @@ class _SettingsViewState extends State<SettingsView> {
           _itemCount = count;
           _isLoading = false;
         });
+      }
+    }
+  }
+
+  Future<void> _exportBackup(AppSettingsProvider settings) async {
+    final isHindi = settings.isHindi;
+    setState(() => _isLoading = true);
+
+    try {
+      final db = DatabaseHelper.instance;
+      final lists = await db.getAllInventories();
+      final items = await db.getAllInventoryItemsAcrossAllLists();
+
+      final List<Map<String, dynamic>> listsJson = [];
+      for (final list in lists) {
+        final listItems = items.where((ii) => ii.inventoryId == list.id).toList();
+        listsJson.add({
+          'name': list.name,
+          'icon_emoji': list.iconEmoji,
+          'is_default': list.isDefault ? 1 : 0,
+          'created_at': list.createdAt.toIso8601String(),
+          'items': listItems.map((ii) => {
+            'catalog_id': ii.catalogId,
+            'custom_name': ii.customName,
+            'name_hi': ii.nameHi,
+            'category': ii.category,
+            'quantity': ii.quantity,
+            'unit': ii.unit,
+            'estimated_price': ii.estimatedPrice,
+            'display_order': ii.displayOrder,
+            'is_low': ii.isLow ? 1 : 0,
+            'is_out': ii.isOut ? 1 : 0,
+            'captured_photo_path': ii.capturedPhotoPath,
+            'updated_at': ii.updatedAt.toIso8601String(),
+          }).toList(),
+        });
+      }
+
+      final backupData = {
+        'app': 'gharkilist',
+        'version': 2,
+        'exported_at': DateTime.now().toIso8601String(),
+        'lists': listsJson,
+      };
+
+      final jsonString = const JsonEncoder.withIndent('  ').convert(backupData);
+
+      final tempDir = await getTemporaryDirectory();
+      final backupFile = File('${tempDir.path}/gharkilist_backup_${DateTime.now().millisecondsSinceEpoch}.json');
+      await backupFile.writeAsString(jsonString);
+
+      await Share.shareXFiles(
+        [XFile(backupFile.path)],
+        subject: isHindi ? 'घर की लिस्ट बैकअप' : 'Gharkilist Data Backup',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(isHindi ? 'बैकअप निर्यात विफल: $e' : 'Export backup failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _importBackup(AppSettingsProvider settings, AppInventoryProvider inventory) async {
+    final isHindi = settings.isHindi;
+
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+      );
+
+      if (result == null || result.files.single.path == null) {
+        return;
+      }
+
+      setState(() => _isLoading = true);
+
+      final file = File(result.files.single.path!);
+      final content = await file.readAsString();
+
+      final Map<String, dynamic> backupData = json.decode(content);
+
+      if (backupData['app'] != 'gharkilist' || backupData['lists'] == null) {
+        throw Exception(isHindi ? 'अमान्य बैकअप फ़ाइल फ़ॉर्मेट' : 'Invalid backup file format.');
+      }
+
+      final List<dynamic> lists = backupData['lists'];
+      int totalItems = 0;
+      for (final l in lists) {
+        final List<dynamic> items = l['items'] ?? [];
+        totalItems += items.length;
+      }
+
+      if (mounted) {
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Text(
+                isHindi ? 'बैकअप रीस्टोर करें?' : 'Restore Backup?',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              content: Text(
+                isHindi
+                    ? 'यह बैकअप फ़ाइल ${lists.length} लिस्ट और $totalItems सामान जोड़ेगी। क्या आप जारी रखना चाहते हैं?'
+                    : 'This backup file will add ${lists.length} lists with $totalItems items. Do you want to continue?',
+                style: const TextStyle(fontSize: 14),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext, false),
+                  child: Text(isHindi ? 'रद्द करें' : 'Cancel'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF00C853),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () => Navigator.pop(dialogContext, true),
+                  child: Text(isHindi ? 'जारी रखें' : 'Continue', style: const TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ],
+            );
+          },
+        );
+
+        if (confirm == true) {
+          await DatabaseHelper.instance.importBackupData(lists);
+          await inventory.preloadData();
+          await _loadStats();
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  isHindi ? 'सफलतापूर्वक रीस्टोर किया गया!' : 'Successfully restored backup!',
+                ),
+                backgroundColor: const Color(0xFF00C853),
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isHindi ? 'बैकअप आयात विफल: $e' : 'Import backup failed: $e'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -302,6 +470,36 @@ class _SettingsViewState extends State<SettingsView> {
                     ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                     : Icon(Icons.chevron_right, color: subtextColor, size: 20),
                 onTap: _itemCount > 0 ? () => _showClearListConfirmation(settings, inventory) : null,
+              ),
+              Divider(height: 1, color: borderColor),
+              ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                leading: Icon(Icons.backup_outlined, color: primaryGreen, size: 24),
+                title: Text(
+                  isHindi ? 'बैकअप निर्यात करें (Export)' : 'Export Backup',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: textColor),
+                ),
+                subtitle: Text(
+                  isHindi ? 'सभी लिस्ट और सामानों का बैकअप फाइल बनाएं' : 'Export all lists and items to a JSON file',
+                  style: TextStyle(fontSize: 12, color: subtextColor),
+                ),
+                trailing: Icon(Icons.chevron_right, color: subtextColor, size: 20),
+                onTap: _isLoading ? null : () => _exportBackup(settings),
+              ),
+              Divider(height: 1, color: borderColor),
+              ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                leading: Icon(Icons.settings_backup_restore_outlined, color: primaryGreen, size: 24),
+                title: Text(
+                  isHindi ? 'बैकअप आयात करें (Import)' : 'Import Backup',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: textColor),
+                ),
+                subtitle: Text(
+                  isHindi ? 'पुरानी बैकअप फाइल से रीस्टोर करें' : 'Import lists and items from a JSON file',
+                  style: TextStyle(fontSize: 12, color: subtextColor),
+                ),
+                trailing: Icon(Icons.chevron_right, color: subtextColor, size: 20),
+                onTap: _isLoading ? null : () => _importBackup(settings, inventory),
               ),
             ],
           ),

@@ -17,8 +17,10 @@ class ItemDetailSheet extends StatefulWidget {
     String unit,
     double? price,
     Map<int, double> listQuantities,
+    List<int> addAnywayListIds,
   ) onSave;
   final VoidCallback? onDelete;
+  final bool isEditMode;
 
   const ItemDetailSheet({
     super.key,
@@ -30,6 +32,7 @@ class ItemDetailSheet extends StatefulWidget {
     this.language = AppLanguage.english,
     required this.onSave,
     this.onDelete,
+    this.isEditMode = false,
   });
 
   @override
@@ -41,6 +44,9 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
   late TextEditingController _priceController;
   late String _selectedUnit;
   late Map<int, double> _selectedListsQuantities;
+
+  String? _nameError;
+  final Map<int, String?> _quantityErrors = {};
 
   List<String> get _availableUnits {
     final set = <String>{};
@@ -96,7 +102,7 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
     super.dispose();
   }
 
-  void _handleSave() {
+  void _proceedSave({List<int> addAnywayListIds = const []}) {
     final price = double.tryParse(_priceController.text);
     final customName = _customNameController.text.trim();
 
@@ -105,7 +111,195 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
       LocalizationService.normalizeUnit(_selectedUnit),
       price,
       _selectedListsQuantities,
+      addAnywayListIds,
     );
+  }
+
+  void _showDuplicatePrompt(List<int> duplicateListIds, List<int> addAnywayListIds) async {
+    final isHindi = widget.language == AppLanguage.hindi;
+    final List<String> listNames = [];
+    for (final id in duplicateListIds) {
+      final list = widget.allLists.firstWhere((l) => l.id == id);
+      listNames.add(LocalizationService.getListName(list.name, widget.language));
+    }
+    final namesString = listNames.join(', ');
+
+    if (!mounted) return;
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            isHindi ? 'समान पहले से मौजूद है' : 'Item Already Exists',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          content: Text(
+            isHindi
+                ? 'यह सामान पहले से आपकी "$namesString" सूची में है। क्या आप मात्रा अपडेट करना चाहते हैं?'
+                : 'Already in your "$namesString" — update quantity instead?',
+            style: const TextStyle(fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, 'cancel'),
+              child: Text(isHindi ? 'रद्द करें' : 'Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF38BDF8),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () => Navigator.pop(dialogContext, 'add_anyway'),
+              child: Text(isHindi ? 'नया जोड़ें' : 'Add Anyway', style: const TextStyle(fontWeight: FontWeight.bold)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00C853),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () => Navigator.pop(dialogContext, 'update'),
+              child: Text(isHindi ? 'मात्रा अपडेट करें' : 'Update Quantity', style: const TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result == 'update') {
+      _proceedSave(addAnywayListIds: addAnywayListIds);
+    } else if (result == 'add_anyway') {
+      final newAnywayList = List<int>.from(addAnywayListIds)..addAll(duplicateListIds);
+      _proceedSave(addAnywayListIds: newAnywayList);
+    }
+  }
+
+  void _showLargeQuantityConfirm(List<int> largeListIds) async {
+    final isHindi = widget.language == AppLanguage.hindi;
+    final List<String> details = [];
+    for (final id in largeListIds) {
+      final list = widget.allLists.firstWhere((l) => l.id == id);
+      final qty = _selectedListsQuantities[id]!;
+      details.add('${qty.toString()} ${_selectedUnit.toUpperCase()} in ${LocalizationService.getListName(list.name, widget.language)}');
+    }
+    final detailsString = details.join('\n');
+
+    if (!mounted) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            isHindi ? 'असामान्य रूप से बड़ी मात्रा?' : 'Unusually Large Quantity?',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          content: Text(
+            isHindi
+                ? 'क्या आप वाकई इन मात्राओं को जोड़ना चाहते हैं?\n$detailsString'
+                : 'Are you sure you want to add these quantities?\n$detailsString',
+            style: const TextStyle(fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(isHindi ? 'नहीं, सुधारें' : 'No, Edit'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00C853),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(isHindi ? 'हां, सहेजें' : 'Yes, Save', style: const TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true) {
+      _proceedSave();
+    }
+  }
+
+  void _handleSave() {
+    setState(() {
+      _nameError = null;
+      _quantityErrors.clear();
+    });
+
+    final name = _customNameController.text.trim();
+    bool hasError = false;
+
+    if (name.isEmpty) {
+      setState(() {
+        _nameError = widget.language == AppLanguage.hindi
+            ? 'सामान का नाम खाली नहीं हो सकता'
+            : 'Item name cannot be empty';
+      });
+      hasError = true;
+    }
+
+    if (_selectedListsQuantities.isEmpty) {
+      final isHindi = widget.language == AppLanguage.hindi;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(isHindi ? 'कृपया कम से कम एक सूची चुनें' : 'Please select at least one list'),
+          backgroundColor: const Color(0xFFEF4444),
+        ),
+      );
+      hasError = true;
+    }
+
+    for (final entry in _selectedListsQuantities.entries) {
+      final listId = entry.key;
+      final qty = entry.value;
+      if (qty <= 0) {
+        setState(() {
+          _quantityErrors[listId] = widget.language == AppLanguage.hindi
+              ? 'मात्रा 0 से अधिक होनी चाहिए'
+              : 'Qty must be > 0';
+        });
+        hasError = true;
+      }
+    }
+
+    if (hasError) return;
+
+    final largeListIds = <int>[];
+    for (final entry in _selectedListsQuantities.entries) {
+      if (entry.value > 100.0) {
+        largeListIds.add(entry.key);
+      }
+    }
+
+    if (largeListIds.isNotEmpty) {
+      _showLargeQuantityConfirm(largeListIds);
+      return;
+    }
+
+    final duplicateLists = <int>[];
+    if (!widget.isEditMode) {
+      for (final listId in _selectedListsQuantities.keys) {
+        final alreadyExists = widget.existingItemsAcrossLists.any((ii) => ii.inventoryId == listId);
+        if (alreadyExists) {
+          duplicateLists.add(listId);
+        }
+      }
+    }
+
+    if (duplicateLists.isNotEmpty) {
+      _showDuplicatePrompt(duplicateLists, []);
+      return;
+    }
+
+    _proceedSave();
   }
 
   @override
@@ -230,14 +424,21 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: borderColor),
+                  borderSide: BorderSide(color: _nameError != null ? const Color(0xFFEF4444) : borderColor),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: borderColor),
+                  borderSide: BorderSide(color: _nameError != null ? const Color(0xFFEF4444) : borderColor),
                 ),
               ),
             ),
+            if (_nameError != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                _nameError!,
+                style: const TextStyle(color: Color(0xFFEF4444), fontSize: 13, fontWeight: FontWeight.w500),
+              ),
+            ],
             const SizedBox(height: 16),
 
             // Unit Input (Global)
@@ -322,139 +523,155 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
                     final qty = _selectedListsQuantities[listId] ?? 1.0;
                     final qtyStr = qty % 1 == 0 ? qty.toInt().toString() : qty.toString();
 
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          if (isSelected) {
-                            _selectedListsQuantities.remove(listId);
-                          } else {
-                            _selectedListsQuantities[listId] = 1.0;
-                          }
-                        });
-                      },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 150),
-                        margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? const Color(0xFF00C853).withValues(alpha: 0.06)
-                              : cardBg,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: isSelected
-                                ? const Color(0xFF00C853).withValues(alpha: 0.4)
-                                : borderColor,
-                            width: 1.5,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 22,
-                              height: 22,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: isSelected ? const Color(0xFF00C853) : Colors.transparent,
-                                border: Border.all(
-                                  color: isSelected ? const Color(0xFF00C853) : subtextColor.withValues(alpha: 0.5),
-                                  width: 2,
-                                ),
-                              ),
-                              child: isSelected
-                                  ? const Icon(Icons.check, size: 14, color: Colors.white)
-                                  : null,
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                list.name,
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                                  color: isSelected ? textColor : subtextColor,
-                                ),
-                                overflow: TextOverflow.ellipsis,
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              if (isSelected) {
+                                _selectedListsQuantities.remove(listId);
+                              } else {
+                                _selectedListsQuantities[listId] = 1.0;
+                              }
+                            });
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? const Color(0xFF00C853).withValues(alpha: 0.06)
+                                  : cardBg,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: _quantityErrors[listId] != null
+                                    ? const Color(0xFFEF4444)
+                                    : (isSelected
+                                        ? const Color(0xFF00C853).withValues(alpha: 0.4)
+                                        : borderColor),
+                                width: 1.5,
                               ),
                             ),
-                            if (isSelected) ...[
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: borderColor),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    _buildStepperButton(
-                                      icon: Icons.remove,
-                                      onPressed: () {
-                                        if (qty > 1) {
-                                          setState(() {
-                                            _selectedListsQuantities[listId] = qty - 1;
-                                          });
-                                        }
-                                      },
-                                      isDark: isDark,
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 22,
+                                  height: 22,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: isSelected ? const Color(0xFF00C853) : Colors.transparent,
+                                    border: Border.all(
+                                      color: isSelected ? const Color(0xFF00C853) : subtextColor.withValues(alpha: 0.5),
+                                      width: 2,
                                     ),
-                                    SizedBox(
-                                      width: 32,
-                                      child: TextFormField(
-                                        initialValue: qtyStr,
-                                        key: ValueKey('qty_${listId}_$qtyStr'),
-                                        textAlign: TextAlign.center,
-                                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                        style: TextStyle(
-                                          color: textColor,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                        decoration: const InputDecoration(
-                                          border: InputBorder.none,
-                                          isDense: true,
-                                          contentPadding: EdgeInsets.zero,
-                                        ),
-                                        onChanged: (val) {
-                                          final d = double.tryParse(val);
-                                          if (d != null && d > 0) {
-                                            _selectedListsQuantities[listId] = d;
-                                          }
-                                        },
-                                      ),
-                                    ),
-                                    _buildStepperButton(
-                                      icon: Icons.add,
-                                      onPressed: () {
-                                        setState(() {
-                                          _selectedListsQuantities[listId] = qty + 1;
-                                        });
-                                      },
-                                      isDark: isDark,
-                                    ),
-                                  ],
+                                  ),
+                                  child: isSelected
+                                      ? const Icon(Icons.check, size: 14, color: Colors.white)
+                                      : null,
                                 ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF00C853).withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  LocalizationService.getUnitLabel(_selectedUnit, widget.language).toUpperCase(),
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF00C853),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    list.name,
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                                      color: isSelected ? textColor : subtextColor,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                              ),
-                            ],
-                          ],
+                                if (isSelected) ...[
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(color: borderColor),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        _buildStepperButton(
+                                          icon: Icons.remove,
+                                          onPressed: () {
+                                            if (qty > 1) {
+                                              setState(() {
+                                                _selectedListsQuantities[listId] = qty - 1;
+                                              });
+                                            }
+                                          },
+                                          isDark: isDark,
+                                        ),
+                                        SizedBox(
+                                          width: 32,
+                                          child: TextFormField(
+                                            initialValue: qtyStr,
+                                            key: ValueKey('qty_${listId}_$qtyStr'),
+                                            textAlign: TextAlign.center,
+                                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                            style: TextStyle(
+                                              color: textColor,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                            decoration: const InputDecoration(
+                                              border: InputBorder.none,
+                                              isDense: true,
+                                              contentPadding: EdgeInsets.zero,
+                                            ),
+                                            onChanged: (val) {
+                                              final d = double.tryParse(val);
+                                              if (d != null) {
+                                                _selectedListsQuantities[listId] = d;
+                                              }
+                                            },
+                                          ),
+                                        ),
+                                        _buildStepperButton(
+                                          icon: Icons.add,
+                                          onPressed: () {
+                                            setState(() {
+                                              _selectedListsQuantities[listId] = qty + 1;
+                                            });
+                                          },
+                                          isDark: isDark,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF00C853).withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      LocalizationService.getUnitLabel(_selectedUnit, widget.language).toUpperCase(),
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF00C853),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
                         ),
-                      ),
+                        if (_quantityErrors[listId] != null) ...[
+                          Padding(
+                            padding: const EdgeInsets.only(left: 8.0, bottom: 8.0),
+                            child: Text(
+                              _quantityErrors[listId]!,
+                              style: const TextStyle(color: Color(0xFFEF4444), fontSize: 12, fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                        ],
+                      ],
                     );
                   },
                 ),

@@ -18,7 +18,9 @@ void main() {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AppSettingsProvider()),
-        ChangeNotifierProvider(create: (_) => AppInventoryProvider()..preloadData()),
+        ChangeNotifierProvider(
+          create: (_) => AppInventoryProvider()..preloadData(),
+        ),
       ],
       child: const GharkilistApp(),
     ),
@@ -39,7 +41,9 @@ class GharkilistApp extends StatelessWidget {
         colorScheme: const ShadSlateColorScheme.light(),
         textTheme: ShadTextTheme(
           family: GoogleFonts.inter(
-            textStyle: const TextStyle(fontFamilyFallback: ['sans-serif', 'Roboto']),
+            textStyle: const TextStyle(
+              fontFamilyFallback: ['sans-serif', 'Roboto'],
+            ),
           ).fontFamily,
         ),
       ),
@@ -48,7 +52,9 @@ class GharkilistApp extends StatelessWidget {
         colorScheme: const ShadSlateColorScheme.dark(),
         textTheme: ShadTextTheme(
           family: GoogleFonts.inter(
-            textStyle: const TextStyle(fontFamilyFallback: ['sans-serif', 'Roboto']),
+            textStyle: const TextStyle(
+              fontFamilyFallback: ['sans-serif', 'Roboto'],
+            ),
           ).fontFamily,
         ),
       ),
@@ -147,7 +153,9 @@ class MainHomeScreen extends StatelessWidget {
               color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF1E293B),
               size: 26,
             ),
-            tooltip: settings.language == AppLanguage.english ? 'Settings' : 'सेटिंग्स',
+            tooltip: settings.language == AppLanguage.english
+                ? 'Settings'
+                : 'सेटिंग्स',
             onPressed: () => _openSettingsView(context),
           ),
           const SizedBox(width: 6),

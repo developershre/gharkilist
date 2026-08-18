@@ -21,9 +21,13 @@ class InventorySearchBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
-    final inputBorderColor = isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1);
+    final inputBorderColor = isDark
+        ? const Color(0xFF334155)
+        : const Color(0xFFCBD5E1);
     final textColor = isDark ? Colors.white : const Color(0xFF000000);
-    final subtextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final subtextColor = isDark
+        ? const Color(0xFF94A3B8)
+        : const Color(0xFF64748B);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
@@ -45,7 +49,9 @@ class InventorySearchBar extends StatelessWidget {
                 style: TextStyle(color: textColor, fontSize: 16),
                 onChanged: onChanged,
                 decoration: InputDecoration(
-                  hintText: language == AppLanguage.hindi ? 'सामान खोजें' : 'Search',
+                  hintText: language == AppLanguage.hindi
+                      ? 'सामान खोजें'
+                      : 'Search',
                   hintStyle: TextStyle(color: subtextColor, fontSize: 16),
                   border: InputBorder.none,
                   isDense: true,
@@ -78,7 +84,9 @@ class InventorySearchBar extends StatelessWidget {
                   children: [
                     Icon(
                       Icons.tune,
-                      color: hasActiveFilters ? const Color(0xFF00C853) : subtextColor,
+                      color: hasActiveFilters
+                          ? const Color(0xFF00C853)
+                          : subtextColor,
                       size: 22,
                     ),
                     if (hasActiveFilters)

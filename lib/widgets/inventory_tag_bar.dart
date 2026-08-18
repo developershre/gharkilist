@@ -30,9 +30,14 @@ class InventoryTagBar extends StatelessWidget {
         child: Row(
           children: [
             ...listsToDisplay.map((list) {
-              final isSelected = activeList.id == list.id ||
-                  (activeList.id == null && activeList.name.toLowerCase() == list.name.toLowerCase());
-              final displayName = LocalizationService.getListName(list.name, language);
+              final isSelected =
+                  activeList.id == list.id ||
+                  (activeList.id == null &&
+                      activeList.name.toLowerCase() == list.name.toLowerCase());
+              final displayName = LocalizationService.getListName(
+                list.name,
+                language,
+              );
 
               return Padding(
                 padding: const EdgeInsets.only(right: 8.0),
@@ -47,7 +52,10 @@ class InventoryTagBar extends StatelessWidget {
               onTap: onCreateNewTap,
               borderRadius: BorderRadius.circular(8),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFF00C853).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),

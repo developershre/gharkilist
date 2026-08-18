@@ -3,6 +3,7 @@ import '../models/catalog_item.dart';
 import '../models/inventory_item.dart';
 import '../models/inventory_list.dart';
 import '../services/database_helper.dart';
+import '../services/catalog_cache.dart';
 
 class AppInventoryProvider extends ChangeNotifier {
   InventoryList? _activeList;
@@ -35,8 +36,9 @@ class AppInventoryProvider extends ChangeNotifier {
     try {
       // 1. Initialize database & preload catalog
       final db = DatabaseHelper.instance;
-      _catalogItems = await db.getAllCatalogItems();
-      final cats = await db.getCatalogCategories();
+      await CatalogCache.instance.ensureLoaded();
+      _catalogItems = await CatalogCache.instance.searchCatalog('');
+      final cats = await CatalogCache.instance.getCategories();
       _catalogCategories = ['All', ...cats];
 
       // 2. Load all inventory lists
@@ -115,9 +117,69 @@ class AppInventoryProvider extends ChangeNotifier {
     };
   }
 
-  /// Creates a new custom inventory list and switches to it.
-  Future<InventoryList> createInventoryList(String name) async {
+  /// Creates a new custom inventory list and switches to it, optionally prefilling with a template.
+  Future<InventoryList> createInventoryList(
+    String name, {
+    bool prefillTemplate = false,
+    String templateType = '',
+  }) async {
     final newList = await DatabaseHelper.instance.createInventory(name, '');
+
+    if (prefillTemplate && templateType.isNotEmpty && newList.id != null) {
+      final List<String> catalogIds = [];
+      if (templateType == 'Diwali') {
+        catalogIds.addAll([
+          'pooja_ghee_oil',
+          'pooja_wicks',
+          'pooja_matchbox',
+          'fest_kesar',
+          'fest_rose_water',
+          'fest_gulab_jamun_mix',
+        ]);
+      } else if (templateType == 'Puja') {
+        catalogIds.addAll([
+          'pooja_agarbatti',
+          'pooja_kapoor',
+          'pooja_wicks',
+          'pooja_gangajal',
+          'pooja_roli_kumkum',
+          'pooja_chandan',
+          'pooja_matchbox',
+          'pooja_kalava',
+        ]);
+      } else if (templateType == 'Rakhi') {
+        catalogIds.addAll([
+          'pooja_roli_kumkum',
+          'pooja_kalava',
+          'fest_kesar',
+          'fest_rose_water',
+          'fest_gulab_jamun_mix',
+        ]);
+      }
+
+      final db = DatabaseHelper.instance;
+      final allCatalog = await db.getAllCatalogItems();
+
+      int order = 0;
+      for (final catId in catalogIds) {
+        final catalogMatch = allCatalog.where((item) => item.id == catId).toList();
+        if (catalogMatch.isNotEmpty) {
+          final catalogMatchItem = catalogMatch.first;
+          final newItem = InventoryItem(
+            inventoryId: newList.id!,
+            catalogId: catalogMatchItem.id,
+            customName: catalogMatchItem.nameEn,
+            nameHi: catalogMatchItem.nameHi,
+            category: catalogMatchItem.category,
+            quantity: 1.0,
+            unit: catalogMatchItem.defaultUnit,
+            displayOrder: order++,
+          );
+          await db.addInventoryItem(newItem);
+        }
+      }
+    }
+
     await refreshAllLists();
     await switchActiveList(newList);
     return newList;
@@ -181,6 +243,7 @@ class AppInventoryProvider extends ChangeNotifier {
     required String unit,
     required double? estimatedPrice,
     required String? capturedPhotoPath,
+    List<int> addAnywayListIds = const [],
   }) async {
     final db = DatabaseHelper.instance;
 
@@ -207,7 +270,7 @@ class AppInventoryProvider extends ChangeNotifier {
       final qty = entry.value;
 
       final existing = existingItems.where((ii) => ii.inventoryId == listId).toList();
-      if (existing.isNotEmpty) {
+      if (existing.isNotEmpty && !addAnywayListIds.contains(listId)) {
         // Update
         final updated = existing.first.copyWith(
           customName: customName,
@@ -243,6 +306,6 @@ class AppInventoryProvider extends ChangeNotifier {
 
   /// Search master catalog with optional category filtering.
   Future<List<CatalogItem>> searchCatalog(String query, {String category = 'All'}) async {
-    return await DatabaseHelper.instance.searchCatalog(query, category: category);
+    return await CatalogCache.instance.searchCatalog(query, category: category);
   }
 }

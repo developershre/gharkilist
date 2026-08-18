@@ -105,6 +105,72 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
     );
   }
 
+  void _duplicateList(InventoryList list) {
+    final nameController = TextEditingController(
+      text: widget.language == AppLanguage.hindi
+          ? '${list.name} (कॉपी)'
+          : '${list.name} (Copy)',
+    );
+    final isHindi = widget.language == AppLanguage.hindi;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(
+            isHindi ? 'सूची की कॉपी बनाएं' : 'Duplicate Inventory List',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                isHindi ? 'नई सूची का नाम:' : 'New List Name:',
+                style: const TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: nameController,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: isHindi ? 'सूची का नाम...' : 'List name...',
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(isHindi ? 'रद्द करें' : 'Cancel', style: const TextStyle(fontSize: 15)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0F172A),
+                foregroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+              ),
+              onPressed: () async {
+                final name = nameController.text.trim();
+                if (name.isNotEmpty && list.id != null) {
+                  final newListName = name;
+                  final newList = await DatabaseHelper.instance.duplicateInventory(list.id!, newListName);
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    widget.onListSelected(newList);
+                    Navigator.pop(context); // Close switcher sheet
+                  }
+                }
+              },
+              child: Text(isHindi ? 'कॉपी करें' : 'Duplicate', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -222,6 +288,11 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          IconButton(
+                            icon: const Icon(Icons.copy_rounded, color: Color(0xFF00C853), size: 22),
+                            tooltip: isHindi ? 'कॉपी बनाएं' : 'Duplicate List',
+                            onPressed: () => _duplicateList(list),
+                          ),
                           if (isSelected)
                             Icon(Icons.check_circle, color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0F172A), size: 24),
                           if (!list.isDefault && list.id != null)

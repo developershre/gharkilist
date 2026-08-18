@@ -5,6 +5,7 @@ import '../models/catalog_item.dart';
 import '../models/inventory_item.dart';
 import '../providers/app_inventory_provider.dart';
 import '../services/database_helper.dart';
+import '../services/catalog_cache.dart';
 import '../services/localization_service.dart';
 import '../widgets/gharkilist_logo.dart';
 import '../widgets/item_icon_widget.dart';
@@ -59,8 +60,8 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    final items = await DatabaseHelper.instance.getAllCatalogItems();
-    final categories = await DatabaseHelper.instance.getCatalogCategories();
+    final items = await CatalogCache.instance.searchCatalog('');
+    final categories = await CatalogCache.instance.getCategories();
     if (mounted) {
       setState(() {
         _catalogItems = items;
@@ -70,19 +71,27 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
     }
   }
 
-  void _onSearchChanged(String query) {
+  void _performSearch(String query) async {
+    final results = await CatalogCache.instance.searchCatalog(
+      query,
+      category: _selectedCategory,
+    );
+    if (mounted) {
+      setState(() {
+        _catalogItems = results;
+      });
+    }
+  }
+
+  void _onSearchChanged(String query, {bool immediate = false}) {
     if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
-    _debounceTimer = Timer(const Duration(milliseconds: 150), () async {
-      final results = await DatabaseHelper.instance.searchCatalog(
-        query,
-        category: _selectedCategory,
-      );
-      if (mounted) {
-        setState(() {
-          _catalogItems = results;
-        });
-      }
-    });
+    if (immediate) {
+      _performSearch(query);
+    } else {
+      _debounceTimer = Timer(const Duration(milliseconds: 250), () {
+        _performSearch(query);
+      });
+    }
   }
 
   void _openItemDetail(CatalogItem item, List<InventoryItem> existingItemsAcrossLists) {
@@ -98,7 +107,7 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
         activeInventoryId: inventory.activeList?.id ?? 1,
         capturedPhotoPath: widget.capturedPhotoPath,
         language: widget.language,
-        onSave: (customName, unit, price, listQuantities) async {
+        onSave: (customName, unit, price, listQuantities, addAnywayListIds) async {
           await inventory.saveItemToLists(
             catalogItem: item,
             listQuantities: listQuantities,
@@ -106,6 +115,7 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
             unit: unit,
             estimatedPrice: price,
             capturedPhotoPath: widget.capturedPhotoPath,
+            addAnywayListIds: addAnywayListIds,
           );
           if (context.mounted) Navigator.pop(context);
         },
@@ -239,6 +249,7 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
 
                 if (isSelected) {
                   return Padding(
+                    key: ValueKey('selected_$catKey'),
                     padding: const EdgeInsets.only(right: 12.0),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -259,13 +270,14 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
                 }
 
                 return Padding(
+                  key: ValueKey('unselected_$catKey'),
                   padding: const EdgeInsets.only(right: 16.0),
                   child: InkWell(
                     onTap: () {
                       setState(() {
                         _selectedCategory = catKey;
                       });
-                      _onSearchChanged(_searchController.text);
+                      _onSearchChanged(_searchController.text, immediate: true);
                     },
                     child: Container(
                       alignment: Alignment.center,
@@ -309,6 +321,7 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
                           final allAddedItems = inventory.catalogIdToItemsAcrossLists[item.id] ?? const [];
 
                           return RepaintBoundary(
+                            key: ValueKey(item.id),
                             child: Container(
                               margin: const EdgeInsets.only(bottom: 12),
                               child: Material(

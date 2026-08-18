@@ -1,10 +1,15 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import '../data/indian_pantry_catalog.dart';
 import '../models/catalog_item.dart';
 import '../models/inventory_item.dart';
 import '../models/inventory_list.dart';
+
+List<Map<String, dynamic>> _mapCatalogToMaps(List<CatalogItem> catalog) {
+  return catalog.map((item) => item.toMap()).toList();
+}
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -33,10 +38,16 @@ class DatabaseHelper {
 
     return await openDatabase(
       pathString,
-      version: 5,
+      version: 6,
+      onConfigure: (db) async {
+        await db.rawQuery('PRAGMA journal_mode = WAL');
+      },
       onCreate: _createDB,
       onUpgrade: (db, oldVersion, newVersion) async {
         await _ensureTablesExist(db);
+        if (oldVersion < 6) {
+          await _createIndexes(db);
+        }
       },
     );
   }
@@ -91,10 +102,11 @@ class DatabaseHelper {
     await _createIndexes(db);
 
     // Fast Single Transaction Batch Seed
+    final catalogMaps = await compute(_mapCatalogToMaps, seedIndianCatalog);
     await db.transaction((txn) async {
       final batch = txn.batch();
-      for (final item in seedIndianCatalog) {
-        batch.insert('catalog_items', item.toMap(),
+      for (final map in catalogMaps) {
+        batch.insert('catalog_items', map,
             conflictAlgorithm: ConflictAlgorithm.replace);
       }
       await batch.commit(noResult: true);
@@ -132,10 +144,11 @@ class DatabaseHelper {
     await _createIndexes(db);
 
     // Fast Single Transaction Batch Upsert
+    final catalogMaps = await compute(_mapCatalogToMaps, seedIndianCatalog);
     await db.transaction((txn) async {
       final batch = txn.batch();
-      for (final item in seedIndianCatalog) {
-        batch.insert('catalog_items', item.toMap(),
+      for (final map in catalogMaps) {
+        batch.insert('catalog_items', map,
             conflictAlgorithm: ConflictAlgorithm.replace);
       }
       await batch.commit(noResult: true);
@@ -183,13 +196,19 @@ class DatabaseHelper {
       await db.execute('CREATE INDEX IF NOT EXISTS idx_catalog_category ON catalog_items(category)');
     } catch (_) {}
     try {
-      await db.execute('CREATE INDEX IF NOT EXISTS idx_catalog_name ON catalog_items(name_en)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_catalog_name_en ON catalog_items(name_en)');
+    } catch (_) {}
+    try {
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_catalog_name_hi ON catalog_items(name_hi)');
     } catch (_) {}
     try {
       await db.execute('CREATE INDEX IF NOT EXISTS idx_inventory_status ON inventory_items(is_out, is_low)');
     } catch (_) {}
     try {
       await db.execute('CREATE INDEX IF NOT EXISTS idx_inventory_parent ON inventory_items(inventory_id)');
+    } catch (_) {}
+    try {
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_inventory_parent_order ON inventory_items(inventory_id, display_order)');
     } catch (_) {}
   }
 
@@ -426,5 +445,88 @@ class DatabaseHelper {
   Future<int> deleteInventoryItem(int id) async {
     final db = await instance.database;
     return await db.delete('inventory_items', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<InventoryList> duplicateInventory(int originalListId, String newListName) async {
+    final db = await database;
+    int newListId = 0;
+    String iconEmoji = '📋';
+
+    await db.transaction((txn) async {
+      // 1. Get original list details
+      final originalListRes = await txn.query('pantry_inventories', where: 'id = ?', whereArgs: [originalListId]);
+      if (originalListRes.isNotEmpty) {
+        iconEmoji = originalListRes.first['icon_emoji'] as String? ?? '📋';
+      }
+
+      // 2. Create new list
+      newListId = await txn.insert('pantry_inventories', {
+        'name': newListName,
+        'icon_emoji': iconEmoji,
+        'is_default': 0,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+
+      // 3. Get all items of original list
+      final originalItems = await txn.query('inventory_items', where: 'inventory_id = ?', whereArgs: [originalListId]);
+
+      // 4. Insert duplicate items into the new list (with is_low and is_out reset to 0)
+      final batch = txn.batch();
+      for (final item in originalItems) {
+        batch.insert('inventory_items', {
+          'inventory_id': newListId,
+          'catalog_id': item['catalog_id'],
+          'custom_name': item['custom_name'],
+          'name_hi': item['name_hi'] ?? item['custom_name'],
+          'category': item['category'],
+          'quantity': item['quantity'],
+          'unit': item['unit'],
+          'estimated_price': item['estimated_price'],
+          'display_order': item['display_order'],
+          'is_low': 0,
+          'is_out': 0,
+          'captured_photo_path': item['captured_photo_path'],
+          'updated_at': DateTime.now().toIso8601String(),
+        });
+      }
+      await batch.commit(noResult: true);
+    });
+
+    return InventoryList(id: newListId, name: newListName, iconEmoji: iconEmoji);
+  }
+
+  Future<void> importBackupData(List<dynamic> listsData) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      for (final listMap in listsData) {
+        // Insert list metadata, get new list ID
+        final newListId = await txn.insert('pantry_inventories', {
+          'name': listMap['name'],
+          'icon_emoji': listMap['icon_emoji'] ?? '🏠',
+          'is_default': 0,
+          'created_at': listMap['created_at'] ?? DateTime.now().toIso8601String(),
+        });
+
+        // Insert items nested under this list
+        final List<dynamic> itemsList = listMap['items'] ?? [];
+        for (final itemMap in itemsList) {
+          await txn.insert('inventory_items', {
+            'inventory_id': newListId,
+            'catalog_id': itemMap['catalog_id'],
+            'custom_name': itemMap['custom_name'],
+            'name_hi': itemMap['name_hi'] ?? itemMap['custom_name'],
+            'category': itemMap['category'] ?? 'Other',
+            'quantity': (itemMap['quantity'] as num?)?.toDouble() ?? 1.0,
+            'unit': itemMap['unit'] ?? 'PCS',
+            'estimated_price': (itemMap['estimated_price'] as num?)?.toDouble(),
+            'display_order': itemMap['display_order'] ?? 0,
+            'is_low': itemMap['is_low'] ?? 0,
+            'is_out': itemMap['is_out'] ?? 0,
+            'captured_photo_path': itemMap['captured_photo_path'],
+            'updated_at': itemMap['updated_at'] ?? DateTime.now().toIso8601String(),
+          });
+        }
+      }
+    });
   }
 }
