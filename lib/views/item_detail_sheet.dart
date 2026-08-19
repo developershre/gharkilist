@@ -4,6 +4,7 @@ import '../models/catalog_item.dart';
 import '../models/inventory_item.dart';
 import '../models/inventory_list.dart';
 import '../services/localization_service.dart';
+import '../widgets/svg_icon.dart';
 
 class ItemDetailSheet extends StatefulWidget {
   final CatalogItem catalogItem;
@@ -386,7 +387,7 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.close, color: subtextColor),
+                  icon: SvgIcon('close', color: subtextColor),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
@@ -568,7 +569,7 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
                                     ),
                                   ),
                                   child: isSelected
-                                      ? const Icon(Icons.check, size: 14, color: Colors.white)
+                                      ? const SvgIcon('check', size: 12, color: Colors.white)
                                       : null,
                                 ),
                                 const SizedBox(width: 10),
@@ -594,7 +595,7 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         _buildStepperButton(
-                                          icon: Icons.remove,
+                                          icon: 'remove',
                                           onPressed: () {
                                             if (qty > 1) {
                                               setState(() {
@@ -630,7 +631,7 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
                                           ),
                                         ),
                                         _buildStepperButton(
-                                          icon: Icons.add,
+                                          icon: 'add',
                                           onPressed: () {
                                             setState(() {
                                               _selectedListsQuantities[listId] = qty + 1;
@@ -794,7 +795,7 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
                       ),
                     );
                   },
-                  icon: const Icon(Icons.delete_outline, size: 20),
+                  icon: const SvgIcon('delete', size: 16),
                   label: Text(
                     isHindi ? 'आइटम हटाएं' : 'Delete Item',
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -809,7 +810,7 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
   }
 
   Widget _buildStepperButton({
-    required IconData icon,
+    required String icon,
     required VoidCallback onPressed,
     required bool isDark,
   }) {
@@ -823,7 +824,7 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
           width: 32,
           height: 32,
           alignment: Alignment.center,
-          child: Icon(icon, size: 16, color: iconColor),
+          child: SvgIcon(icon, size: 12, color: iconColor),
         ),
       ),
     );

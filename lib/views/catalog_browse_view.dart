@@ -8,6 +8,7 @@ import '../services/database_helper.dart';
 import '../services/catalog_cache.dart';
 import '../services/localization_service.dart';
 import '../widgets/gharkilist_logo.dart';
+import '../widgets/svg_icon.dart';
 import '../widgets/item_icon_widget.dart';
 import 'item_detail_sheet.dart';
 import 'settings_view.dart';
@@ -176,14 +177,14 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
         backgroundColor: appBarBg,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: iconColor),
+          icon: SvgIcon('arrow_back', color: iconColor),
           onPressed: () => Navigator.pop(context),
         ),
         titleSpacing: 0,
         title: GharkiListLogoWidget(language: widget.language),
         actions: [
           IconButton(
-            icon: Icon(Icons.settings_outlined, color: iconColor, size: 26),
+            icon: SvgIcon('settings', color: iconColor, size: 22),
             tooltip: isHindi ? 'सेटिंग्स' : 'Settings',
             onPressed: _openSettingsView,
           ),
@@ -206,7 +207,7 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.search, color: subtextColor, size: 20),
+                  SvgIcon('search', color: subtextColor, size: 16),
                   const SizedBox(width: 10),
                   Expanded(
                     child: TextField(
@@ -228,7 +229,7 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
                         _searchController.clear();
                         _onSearchChanged('');
                       },
-                      child: Icon(Icons.close, color: subtextColor, size: 18),
+                      child: SvgIcon('close', color: subtextColor, size: 14),
                     ),
                 ],
               ),
@@ -380,10 +381,10 @@ class _CatalogBrowseViewState extends State<CatalogBrowseView> {
                                     isHindi ? item.categoryHi : item.category,
                                     style: TextStyle(color: subtextColor, fontSize: 13),
                                   ),
-                                  trailing: Icon(
-                                    Icons.add,
+                                  trailing: SvgIcon(
+                                    'add',
                                     color: isDark ? const Color(0xFF00C853) : const Color(0xFF0F172A),
-                                    size: 24,
+                                    size: 18,
                                   ),
                                   onTap: () => _openItemDetail(item, allAddedItems),
                                 ),

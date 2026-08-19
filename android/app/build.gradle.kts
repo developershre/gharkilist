@@ -47,7 +47,17 @@ android {
             val envVersion = System.getenv("APK_VERSION")
             val customName = if (!envName.isNullOrEmpty()) envName else (if (project.hasProperty("apkName")) project.property("apkName") as String else "gharkilist")
             val customVersion = if (!envVersion.isNullOrEmpty()) envVersion else (if (project.hasProperty("apkVersion")) project.property("apkVersion") as String else variant.versionName)
-            output.outputFileName = "$customName-v$customVersion.apk"
+            
+            val originalName = output.outputFileName
+            val abi = when {
+                originalName.contains("arm64-v8a") -> "arm64-v8a"
+                originalName.contains("armeabi-v7a") -> "armeabi-v7a"
+                originalName.contains("x86_64") -> "x86_64"
+                originalName.contains("x86") -> "x86"
+                else -> null
+            }
+            val suffix = if (abi != null) "-$abi" else ""
+            output.outputFileName = "$customName-v$customVersion$suffix.apk"
         }
     }
 }

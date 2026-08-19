@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/localization_service.dart';
+import 'svg_icon.dart';
 
 class InventorySearchBar extends StatelessWidget {
   final TextEditingController controller;
@@ -41,7 +42,7 @@ class InventorySearchBar extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(Icons.search, color: subtextColor, size: 20),
+            SvgIcon('search', color: subtextColor, size: 16),
             const SizedBox(width: 10),
             Expanded(
               child: TextField(
@@ -69,7 +70,7 @@ class InventorySearchBar extends StatelessWidget {
                   },
                   child: Padding(
                     padding: const EdgeInsets.only(right: 8.0),
-                    child: Icon(Icons.close, color: subtextColor, size: 18),
+                    child: SvgIcon('close', color: subtextColor, size: 14),
                   ),
                 );
               },
@@ -82,12 +83,12 @@ class InventorySearchBar extends StatelessWidget {
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    Icon(
-                      Icons.tune,
+                    SvgIcon(
+                      'tune',
                       color: hasActiveFilters
                           ? const Color(0xFF00C853)
                           : subtextColor,
-                      size: 22,
+                      size: 18,
                     ),
                     if (hasActiveFilters)
                       Positioned(

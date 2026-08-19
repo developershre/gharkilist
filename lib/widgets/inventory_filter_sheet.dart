@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/localization_service.dart';
+import 'svg_icon.dart';
 
 class InventoryFilterSheet extends StatefulWidget {
   final String categoryFilter;
@@ -44,12 +45,12 @@ class _InventoryFilterSheetState extends State<InventoryFilterSheet> {
     final chipTextColor = isDark ? Colors.white : const Color(0xFF1E293B);
 
     final sortOptions = [
-      {'key': 'Default', 'icon': Icons.swap_vert},
-      {'key': 'A - Z', 'icon': Icons.sort_by_alpha},
-      {'key': 'Z - A', 'icon': Icons.sort_by_alpha},
-      {'key': 'Qty: Low → High', 'icon': Icons.arrow_upward},
-      {'key': 'Qty: High → Low', 'icon': Icons.arrow_downward},
-      {'key': 'Price: High → Low', 'icon': Icons.attach_money},
+      {'key': 'Default', 'icon': 'swap_vertical'},
+      {'key': 'A - Z', 'icon': 'sort_alpha'},
+      {'key': 'Z - A', 'icon': 'sort_alpha'},
+      {'key': 'Qty: Low → High', 'icon': 'arrow_up'},
+      {'key': 'Qty: High → Low', 'icon': 'arrow_down'},
+      {'key': 'Price: High → Low', 'icon': 'money'},
     ];
 
     final categories = [
@@ -108,11 +109,11 @@ class _InventoryFilterSheetState extends State<InventoryFilterSheet> {
               runSpacing: 8,
               children: sortOptions.map((opt) {
                 final key = opt['key'] as String;
-                final icon = opt['icon'] as IconData;
+                final icon = opt['icon'] as String;
                 final label = LocalizationService.getSortOptionLabel(key, widget.language);
                 final isSel = _selectedSort == key;
                 return ChoiceChip(
-                  avatar: Icon(icon, size: 16, color: isSel ? Colors.white : activeColor),
+                  avatar: SvgIcon(icon, size: 16, color: isSel ? Colors.white : activeColor),
                   label: Text(label),
                   selected: isSel,
                   selectedColor: activeColor,

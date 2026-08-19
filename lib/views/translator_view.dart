@@ -5,6 +5,7 @@ import '../models/catalog_item.dart';
 import '../models/inventory_item.dart';
 import '../services/localization_service.dart';
 import '../widgets/item_icon_widget.dart';
+import '../widgets/svg_icon.dart';
 
 class TranslatorView extends StatefulWidget {
   final AppLanguage language;
@@ -79,7 +80,7 @@ class _TranslatorViewState extends State<TranslatorView> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.g_translate, color: Color(0xFF0284C7), size: 28),
+                  const SvgIcon('translate', color: Color(0xFF0284C7), size: 22),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
@@ -98,7 +99,7 @@ class _TranslatorViewState extends State<TranslatorView> {
               placeholder: Text(
                 isHindi ? 'अंग्रेजी या हिंदी में नाम लिखें...' : 'Type item name...',
               ),
-              leading: const Icon(Icons.search, size: 20),
+              leading: const SvgIcon('search', size: 16),
               onChanged: _translateInput,
             ),
             const SizedBox(height: 16),
@@ -167,7 +168,7 @@ class _TranslatorViewState extends State<TranslatorView> {
                                   ),
                                 ),
                                 const SizedBox(width: 6),
-                                const Icon(Icons.compare_arrows, size: 16, color: Colors.grey),
+                                const SvgIcon('compare', size: 12, color: Colors.grey),
                                 const SizedBox(width: 6),
                                 Expanded(
                                   child: Text(

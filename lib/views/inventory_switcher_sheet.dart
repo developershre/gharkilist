@@ -3,6 +3,7 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import '../models/inventory_list.dart';
 import '../services/database_helper.dart';
 import '../services/localization_service.dart';
+import '../widgets/svg_icon.dart';
 
 class InventorySwitcherSheet extends StatefulWidget {
   final InventoryList activeList;
@@ -221,7 +222,7 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
                 ),
               ),
               IconButton(
-                icon: Icon(Icons.add_circle_outline, color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0F172A), size: 26),
+                icon: SvgIcon('add_circle', color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0F172A), size: 20),
                 onPressed: _showCreateDialog,
                 tooltip: isHindi ? 'नई सूची बनाएं' : 'Create New Inventory List',
               ),
@@ -289,15 +290,15 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
-                            icon: const Icon(Icons.copy_rounded, color: Color(0xFF00C853), size: 22),
+                            icon: const SvgIcon('copy', color: Color(0xFF00C853), size: 18),
                             tooltip: isHindi ? 'कॉपी बनाएं' : 'Duplicate List',
                             onPressed: () => _duplicateList(list),
                           ),
                           if (isSelected)
-                            Icon(Icons.check_circle, color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0F172A), size: 24),
+                            SvgIcon('check_circle', color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0F172A), size: 18),
                           if (!list.isDefault && list.id != null)
                             IconButton(
-                              icon: const Icon(Icons.delete_outline, color: Color(0xFFEF4444), size: 22),
+                              icon: const SvgIcon('delete', color: Color(0xFFEF4444), size: 18),
                               onPressed: () async {
                                 await DatabaseHelper.instance.deleteInventory(list.id!);
                                 _loadLists();
@@ -323,7 +324,7 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.add, size: 20),
+                  const SvgIcon('add', size: 16),
                   const SizedBox(width: 8),
                   Flexible(
                     child: Text(

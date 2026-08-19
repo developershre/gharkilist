@@ -5,6 +5,7 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import '../models/inventory_item.dart';
 import '../services/database_helper.dart';
 import '../services/localization_service.dart';
+import '../widgets/svg_icon.dart';
 
 class AddItemFormView extends StatefulWidget {
   final int inventoryId;
@@ -209,7 +210,7 @@ class _AddItemFormViewState extends State<AddItemFormView> {
                                 color: Colors.black54,
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(Icons.close, color: Colors.white, size: 20),
+                              child: const SvgIcon('close', color: Colors.white, size: 16),
                             ),
                           ),
                         ),
@@ -218,7 +219,7 @@ class _AddItemFormViewState extends State<AddItemFormView> {
                   : Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.add_a_photo_outlined, size: 48, color: subtextColor),
+                        SvgIcon('camera', size: 38, color: subtextColor),
                         const SizedBox(height: 10),
                         Text(
                           isHindi ? 'कोई फोटो नहीं चुनी गई' : 'No photo attached yet',
@@ -230,7 +231,7 @@ class _AddItemFormViewState extends State<AddItemFormView> {
                           children: [
                             OutlinedButton.icon(
                               onPressed: _takePhoto,
-                              icon: const Icon(Icons.camera_alt, size: 18),
+                              icon: SvgIcon('camera', size: 14, color: activeColor),
                               label: Text(isHindi ? 'कैमरा' : 'Camera'),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: activeColor,
@@ -240,7 +241,7 @@ class _AddItemFormViewState extends State<AddItemFormView> {
                             const SizedBox(width: 12),
                             OutlinedButton.icon(
                               onPressed: _pickFromGallery,
-                              icon: const Icon(Icons.photo_library, size: 18),
+                              icon: SvgIcon('photo_library', size: 14, color: subtextColor),
                               label: Text(isHindi ? 'गैलरी' : 'Gallery'),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: subtextColor,
@@ -259,7 +260,7 @@ class _AddItemFormViewState extends State<AddItemFormView> {
                 children: [
                   TextButton.icon(
                     onPressed: _takePhoto,
-                    icon: const Icon(Icons.camera_alt, size: 16),
+                    icon: SvgIcon('camera', size: 14, color: activeColor),
                     label: Text(isHindi ? 'फिर से फोटो लें' : 'Retake Photo'),
                     style: TextButton.styleFrom(foregroundColor: activeColor),
                   ),
@@ -492,7 +493,7 @@ class _AddItemFormViewState extends State<AddItemFormView> {
                     : Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.check_circle_outline, size: 22),
+                          const SvgIcon('check_circle', size: 18, color: Colors.white),
                           const SizedBox(width: 8),
                           Text(
                             isHindi ? 'सूची में सहेजें' : 'Save to Inventory',

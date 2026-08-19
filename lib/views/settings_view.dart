@@ -10,6 +10,7 @@ import '../providers/app_inventory_provider.dart';
 import '../providers/app_settings_provider.dart';
 import '../services/database_helper.dart';
 import '../services/localization_service.dart';
+import '../widgets/svg_icon.dart';
 
 class SettingsView extends StatefulWidget {
   final InventoryList activeList;
@@ -311,7 +312,7 @@ class _SettingsViewState extends State<SettingsView> {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.palette_outlined, color: primaryGreen, size: 20),
+                        SvgIcon('palette', color: primaryGreen, size: 16),
                         const SizedBox(width: 10),
                         Text(
                           isHindi ? 'थीम' : 'Theme',
@@ -365,7 +366,7 @@ class _SettingsViewState extends State<SettingsView> {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.language, color: primaryGreen, size: 20),
+                        SvgIcon('translate', color: primaryGreen, size: 16),
                         const SizedBox(width: 10),
                         Text(
                           isHindi ? 'भाषा' : 'Language',
@@ -414,7 +415,7 @@ class _SettingsViewState extends State<SettingsView> {
             children: [
               ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-                leading: Icon(Icons.g_translate, color: primaryGreen, size: 22),
+                leading: SvgIcon('translate', color: primaryGreen, size: 18),
                 title: Text(
                   isHindi ? 'हिंदी / English अनुवादक' : 'Translator Tool',
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: textColor),
@@ -423,7 +424,7 @@ class _SettingsViewState extends State<SettingsView> {
                   isHindi ? 'किराना सामानों का नाम अनुवाद करें' : 'Translate Kirana item names',
                   style: TextStyle(fontSize: 12, color: subtextColor),
                 ),
-                trailing: Icon(Icons.chevron_right, color: subtextColor, size: 20),
+                trailing: SvgIcon('chevron_right', color: subtextColor, size: 16),
                 onTap: () {
                   Navigator.pop(context);
                   widget.onOpenTranslator();
@@ -432,7 +433,7 @@ class _SettingsViewState extends State<SettingsView> {
               Divider(height: 1, color: borderColor),
               SwitchListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-                secondary: Icon(Icons.currency_rupee, color: primaryGreen, size: 22),
+                secondary: SvgIcon('money', color: primaryGreen, size: 18),
                 title: Text(
                   isHindi ? 'WhatsApp शेयर में दाम शामिल करें' : 'Include Prices in WhatsApp Share',
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: textColor),
@@ -457,7 +458,7 @@ class _SettingsViewState extends State<SettingsView> {
             children: [
               ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                leading: const Icon(Icons.delete_sweep_outlined, color: Color(0xFFEF4444), size: 24),
+                leading: const SvgIcon('delete', color: Color(0xFFEF4444), size: 20),
                 title: Text(
                   isHindi ? 'सूची के सभी सामान हटाएं' : 'Clear All Items in List',
                   style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFFEF4444)),
@@ -468,13 +469,13 @@ class _SettingsViewState extends State<SettingsView> {
                 ),
                 trailing: _isLoading
                     ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                    : Icon(Icons.chevron_right, color: subtextColor, size: 20),
+                    : SvgIcon('chevron_right', color: subtextColor, size: 16),
                 onTap: _itemCount > 0 ? () => _showClearListConfirmation(settings, inventory) : null,
               ),
               Divider(height: 1, color: borderColor),
               ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                leading: Icon(Icons.backup_outlined, color: primaryGreen, size: 24),
+                leading: SvgIcon('backup', color: primaryGreen, size: 20),
                 title: Text(
                   isHindi ? 'बैकअप निर्यात करें (Export)' : 'Export Backup',
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: textColor),
@@ -483,13 +484,13 @@ class _SettingsViewState extends State<SettingsView> {
                   isHindi ? 'सभी लिस्ट और सामानों का बैकअप फाइल बनाएं' : 'Export all lists and items to a JSON file',
                   style: TextStyle(fontSize: 12, color: subtextColor),
                 ),
-                trailing: Icon(Icons.chevron_right, color: subtextColor, size: 20),
+                trailing: SvgIcon('chevron_right', color: subtextColor, size: 16),
                 onTap: _isLoading ? null : () => _exportBackup(settings),
               ),
               Divider(height: 1, color: borderColor),
               ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                leading: Icon(Icons.settings_backup_restore_outlined, color: primaryGreen, size: 24),
+                leading: SvgIcon('restore', color: primaryGreen, size: 20),
                 title: Text(
                   isHindi ? 'बैकअप आयात करें (Import)' : 'Import Backup',
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: textColor),
@@ -498,7 +499,7 @@ class _SettingsViewState extends State<SettingsView> {
                   isHindi ? 'पुरानी बैकअप फाइल से रीस्टोर करें' : 'Import lists and items from a JSON file',
                   style: TextStyle(fontSize: 12, color: subtextColor),
                 ),
-                trailing: Icon(Icons.chevron_right, color: subtextColor, size: 20),
+                trailing: SvgIcon('chevron_right', color: subtextColor, size: 16),
                 onTap: _isLoading ? null : () => _importBackup(settings, inventory),
               ),
             ],

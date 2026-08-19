@@ -42,21 +42,40 @@ export APK_NAME
 export APK_VERSION
 
 # Run flutter build
-flutter build apk
+flutter build apk --split-per-abi
 
-# Find and copy output to root project directory
-echo "Locating built APK file..."
-BUILT_APK=$(find build/app/outputs/apk/ -name "$APK_NAME-v$APK_VERSION*.apk" | head -n 1)
+# Find and copy output to output directory
+echo "Locating built APK files..."
+mkdir -p ./output
 
-if [ -f "$BUILT_APK" ]; then
-    DEST_APK="./output/$(basename "$BUILT_APK")"
-    cp "$BUILT_APK" "$DEST_APK"
+ARM64_APK=$(find build/app/outputs/apk/ -name "*arm64-v8a.apk" | head -n 1)
+ARM32_APK=$(find build/app/outputs/apk/ -name "*armeabi-v7a.apk" | head -n 1)
+X86_APK=$(find build/app/outputs/apk/ -name "*x86_64.apk" | head -n 1)
+
+if [ -f "$ARM64_APK" ] || [ -f "$ARM32_APK" ] || [ -f "$X86_APK" ]; then
     echo "-------------------------------------------"
-    echo "Success! APK copied to project root:"
-    echo "👉 $(pwd)/$DEST_APK"
+    echo "Success! Split APKs copied to output folder:"
+    
+    if [ -f "$ARM64_APK" ]; then
+        cp "$ARM64_APK" "./output/${APK_NAME}-v${APK_VERSION}-Modern_Phones-64bit.apk"
+        echo "👉 Modern Phones (64-bit ARM): ./output/${APK_NAME}-v${APK_VERSION}-Modern_Phones-64bit.apk"
+    fi
+    if [ -f "$ARM32_APK" ]; then
+        cp "$ARM32_APK" "./output/${APK_NAME}-v${APK_VERSION}-Older_Phones-32bit.apk"
+        echo "👉 Older Phones (32-bit ARM):  ./output/${APK_NAME}-v${APK_VERSION}-Older_Phones-32bit.apk"
+    fi
+    if [ -f "$X86_APK" ]; then
+        cp "$X86_APK" "./output/${APK_NAME}-v${APK_VERSION}-PC_Emulators-x86_64.apk"
+        echo "👉 PC Emulators / ChromeOS:    ./output/${APK_NAME}-v${APK_VERSION}-PC_Emulators-x86_64.apk"
+    fi
+    echo "-------------------------------------------"
+    echo "💡 HELP: WHICH APK SHOULD I INSTALL?"
+    echo "• If your phone is modern (bought in the last 6-8 years), install the 'Modern_Phones-64bit.apk'."
+    echo "• If it is an older or budget device, install the 'Older_Phones-32bit.apk'."
+    echo "• If you are running on an emulator on your PC, install the 'PC_Emulators-x86_64.apk'."
     echo "-------------------------------------------"
 else
-    echo "Error: Could not locate the generated APK."
+    echo "Error: Could not locate the generated APKs."
     echo "Please check the build logs above."
     exit 1
 fi

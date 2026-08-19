@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/inventory_item.dart';
 import '../services/localization_service.dart';
 import 'item_icon_widget.dart';
+import 'svg_icon.dart';
 
 class InventoryItemTile extends StatelessWidget {
   final int index;
@@ -106,12 +107,12 @@ class InventoryItemTile extends StatelessWidget {
                       horizontal: 4,
                       vertical: 8,
                     ),
-                    child: Icon(
-                      Icons.drag_indicator,
+                    child: SvgIcon(
+                      'drag_handle',
                       color: isDark
                           ? const Color(0xFF64748B)
                           : const Color(0xFF475569),
-                      size: 24,
+                      size: 18,
                     ),
                   ),
                 ),
@@ -124,7 +125,7 @@ class InventoryItemTile extends StatelessWidget {
                 emojiHint: item.catalogItem?.iconEmoji,
                 capturedPhotoPath: item.capturedPhotoPath,
                 size: 58,
-                iconSize: 30,
+                iconSize: 22,
               ),
               const SizedBox(width: 16),
 
@@ -172,9 +173,9 @@ class InventoryItemTile extends StatelessWidget {
                                 },
                                 child: Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                                  child: Icon(
-                                    Icons.remove,
-                                    size: 14,
+                                  child: SvgIcon(
+                                    'remove',
+                                    size: 11,
                                     color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
                                   ),
                                 ),
@@ -208,9 +209,9 @@ class InventoryItemTile extends StatelessWidget {
                                 },
                                 child: Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                                  child: Icon(
-                                    Icons.add,
-                                    size: 14,
+                                  child: SvgIcon(
+                                    'add',
+                                    size: 11,
                                     color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
                                   ),
                                 ),
@@ -243,10 +244,10 @@ class InventoryItemTile extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
-                          icon: Icon(
-                            Icons.edit_square,
+                          icon: SvgIcon(
+                            'edit',
                             color: primaryGreen,
-                            size: 26,
+                            size: 20,
                           ),
                           tooltip: language == AppLanguage.hindi
                               ? 'संपादित करें'
@@ -259,10 +260,10 @@ class InventoryItemTile extends StatelessWidget {
                         const SizedBox(width: 6),
 
                         IconButton(
-                          icon: Icon(
-                            Icons.delete_outline,
+                          icon: SvgIcon(
+                            'delete',
                             color: deleteRed,
-                            size: 26,
+                            size: 20,
                           ),
                           tooltip: language == AppLanguage.hindi
                               ? 'हटाएं'

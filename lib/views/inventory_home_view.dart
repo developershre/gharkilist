@@ -8,6 +8,7 @@ import '../models/inventory_item.dart';
 import '../models/inventory_list.dart';
 import '../services/database_helper.dart';
 import '../services/catalog_cache.dart';
+import '../widgets/svg_icon.dart';
 import '../services/localization_service.dart';
 import '../services/share_service.dart';
 import '../widgets/add_item_options_sheet.dart';
@@ -221,18 +222,102 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
     );
   }
 
-  void _onReorderItems(int oldIndex, int newIndex) async {
+  Future<void> _onReorderItems(int oldIndex, int newIndex) async {
     setState(() {
       _selectedSortOption = 'Default';
-      if (newIndex > oldIndex) {
-        newIndex -= 1;
+
+      final displayItems = _filteredItems;
+      if (oldIndex < 0 || oldIndex >= displayItems.length) {
+        return;
       }
-      final item = _localItems.removeAt(oldIndex);
-      _localItems.insert(newIndex, item);
+
+      final itemToMove = displayItems[oldIndex];
+      
+      // Find the index of itemToMove in _localItems
+      final actualOldIndex = _localItems.indexWhere((i) {
+        if (i.id != null && itemToMove.id != null) {
+          return i.id == itemToMove.id;
+        }
+        return i.catalogId == itemToMove.catalogId && i.customName == itemToMove.customName;
+      });
+      if (actualOldIndex == -1) {
+        return;
+      }
+
+      // Remove from _localItems
+      _localItems.removeAt(actualOldIndex);
+
+      // Find the remaining filtered items after removing itemToMove
+      final remainingFiltered = displayItems.where((item) {
+        if (item.id != null && itemToMove.id != null) {
+          return item.id != itemToMove.id;
+        }
+        return item.catalogId != itemToMove.catalogId || item.customName != itemToMove.customName;
+      }).toList();
+
+      if (remainingFiltered.isEmpty) {
+        // Put it back if there are no other filtered items
+        _localItems.insert(actualOldIndex, itemToMove);
+        return;
+      }
+
+      int targetFilteredIndex = newIndex;
+      if (newIndex > oldIndex) {
+        targetFilteredIndex = newIndex - 1;
+      }
+
+      if (targetFilteredIndex >= remainingFiltered.length) {
+        // Dragged to the very end of the filtered list.
+        // Insert after the last item of remainingFiltered.
+        final lastFilteredItem = remainingFiltered.last;
+        final lastFilteredActualIndex = _localItems.indexWhere((i) {
+          if (i.id != null && lastFilteredItem.id != null) {
+            return i.id == lastFilteredItem.id;
+          }
+          return i.catalogId == lastFilteredItem.catalogId && i.customName == lastFilteredItem.customName;
+        });
+        if (lastFilteredActualIndex != -1) {
+          _localItems.insert(lastFilteredActualIndex + 1, itemToMove);
+        } else {
+          _localItems.insert(actualOldIndex, itemToMove);
+        }
+      } else {
+        // Dragged before the item at targetFilteredIndex in remainingFiltered.
+        final targetFilteredItem = remainingFiltered[targetFilteredIndex];
+        final targetActualIndex = _localItems.indexWhere((i) {
+          if (i.id != null && targetFilteredItem.id != null) {
+            return i.id == targetFilteredItem.id;
+          }
+          return i.catalogId == targetFilteredItem.catalogId && i.customName == targetFilteredItem.customName;
+        });
+        if (targetActualIndex != -1) {
+          _localItems.insert(targetActualIndex, itemToMove);
+        } else {
+          _localItems.insert(actualOldIndex, itemToMove);
+        }
+      }
     });
 
     await DatabaseHelper.instance.updateItemsDisplayOrder(_localItems);
     widget.onRefresh();
+  }
+
+  @visibleForTesting
+  List<InventoryItem> get localItemsForTest => _localItems;
+
+  @visibleForTesting
+  List<InventoryItem> get filteredItemsForTest => _filteredItems;
+
+  @visibleForTesting
+  void setCategoryFilterForTest(String category) {
+    setState(() {
+      _selectedCategoryFilter = category;
+    });
+  }
+
+  @visibleForTesting
+  Future<void> onReorderItemsForTest(int oldIndex, int newIndex) async {
+    await _onReorderItems(oldIndex, newIndex);
   }
 
   double get _totalEstBudget {
@@ -672,12 +757,12 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(
-                                  Icons.delete_outline,
-                                  color: Colors.white,
-                                  size: 24,
-                                ) ,
-                                const SizedBox(width: 6),
+                                 const SvgIcon(
+                                   'delete',
+                                   color: Colors.white,
+                                   size: 20,
+                                 ),
+                                 const SizedBox(width: 6),
                                 Text(
                                   isHindi ? 'हटाएं' : 'Delete',
                                   style: const TextStyle(
@@ -822,10 +907,10 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(
-                            Icons.share,
+                           const SvgIcon(
+                            'share',
                             color: Colors.white,
-                            size: 22,
+                            size: 18,
                           ),
                           const SizedBox(width: 8),
                           Text(
@@ -850,7 +935,7 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                     padding: EdgeInsets.zero,
                     backgroundColor: const Color(0xFF00C853),
                     onPressed: () => _showAddModal(context),
-                    child: const Icon(Icons.add, color: Colors.white, size: 30),
+                    child: const SvgIcon('add', color: Colors.white, size: 24),
                   ),
                 ],
               ),
@@ -960,12 +1045,12 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                   isHindi ? item.categoryHi : item.category,
                   style: TextStyle(color: subtextColor, fontSize: 13),
                 ),
-                trailing: Icon(
-                  Icons.add,
+                trailing: SvgIcon(
+                  'add',
                   color: isDark
                       ? const Color(0xFF00C853)
                       : const Color(0xFF0F172A),
-                  size: 24,
+                  size: 18,
                 ),
                 onTap: () {
                   final catalog = CatalogItem(

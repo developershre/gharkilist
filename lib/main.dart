@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'providers/app_inventory_provider.dart';
@@ -12,6 +11,7 @@ import 'views/settings_view.dart';
 import 'views/translator_view.dart';
 import 'widgets/gharkilist_logo.dart';
 import 'views/splash_view.dart';
+import 'widgets/svg_icon.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,24 +40,10 @@ class GharkilistApp extends StatelessWidget {
       theme: ShadThemeData(
         brightness: Brightness.light,
         colorScheme: const ShadSlateColorScheme.light(),
-        textTheme: ShadTextTheme(
-          family: GoogleFonts.inter(
-            textStyle: const TextStyle(
-              fontFamilyFallback: ['sans-serif', 'Roboto'],
-            ),
-          ).fontFamily,
-        ),
       ),
       darkTheme: ShadThemeData(
         brightness: Brightness.dark,
         colorScheme: const ShadSlateColorScheme.dark(),
-        textTheme: ShadTextTheme(
-          family: GoogleFonts.inter(
-            textStyle: const TextStyle(
-              fontFamilyFallback: ['sans-serif', 'Roboto'],
-            ),
-          ).fontFamily,
-        ),
       ),
       themeMode: settings.themeMode,
       home: const SplashView(),
@@ -149,10 +135,10 @@ class MainHomeScreen extends StatelessWidget {
         title: GharkiListLogoWidget(language: settings.language),
         actions: [
           IconButton(
-            icon: Icon(
-              Icons.settings_outlined,
+            icon: SvgIcon(
+              'settings',
               color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF1E293B),
-              size: 26,
+              size: 22,
             ),
             tooltip: settings.language == AppLanguage.english
                 ? 'Settings'

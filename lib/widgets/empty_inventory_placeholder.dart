@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/localization_service.dart';
+import 'svg_icon.dart';
 
 class EmptyInventoryPlaceholder extends StatelessWidget {
   final String listName;
@@ -34,10 +35,10 @@ class EmptyInventoryPlaceholder extends StatelessWidget {
                 color: const Color(0xFF00C853).withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.add_shopping_cart_outlined,
+              child: const SvgIcon(
+                'shopping_cart',
                 color: Color(0xFF00C853),
-                size: 48,
+                size: 38,
               ),
             ),
             const SizedBox(height: 16),
@@ -74,7 +75,7 @@ class EmptyInventoryPlaceholder extends StatelessWidget {
                 ),
               ),
               onPressed: onAddItemTap,
-              icon: const Icon(Icons.add, size: 20),
+              icon: const SvgIcon('add', size: 16, color: Colors.white),
               label: Text(
                 language == AppLanguage.hindi ? 'सामान जोड़ें' : 'Add Item',
                 style: const TextStyle(

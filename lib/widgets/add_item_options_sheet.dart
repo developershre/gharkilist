@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/localization_service.dart';
+import 'svg_icon.dart';
 
 class AddItemOptionsSheet extends StatelessWidget {
   final String listName;
@@ -54,7 +55,7 @@ class AddItemOptionsSheet extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           _OptionRow(
-            icon: Icons.camera_alt_outlined,
+            icon: 'camera',
             title: isHindi ? 'फोटो स्कैन करें' : 'Scan Photo',
             subtitle: isHindi
                 ? 'सामान की फोटो खींचें या स्कैन करें'
@@ -70,7 +71,7 @@ class AddItemOptionsSheet extends StatelessWidget {
           Divider(color: dividerColor, thickness: 1),
           const SizedBox(height: 18),
           _OptionRow(
-            icon: Icons.edit_note,
+            icon: 'edit_note',
             title: isHindi ? 'फॉर्म भरें' : 'Add Item Form',
             subtitle: isHindi
                 ? 'मैन्युअल रूप से विवरण भरें'
@@ -86,7 +87,7 @@ class AddItemOptionsSheet extends StatelessWidget {
           Divider(color: dividerColor, thickness: 1),
           const SizedBox(height: 18),
           _OptionRow(
-            icon: Icons.search,
+            icon: 'search',
             title: isHindi ? 'कलेक्शन देखें' : 'Browse Collection',
             subtitle: isHindi
                 ? '200+ सामान की सूची में से चुनें'
@@ -106,7 +107,7 @@ class AddItemOptionsSheet extends StatelessWidget {
 }
 
 class _OptionRow extends StatelessWidget {
-  final IconData icon;
+  final String icon;
   final String title;
   final String subtitle;
   final Color textColor;
@@ -136,10 +137,10 @@ class _OptionRow extends StatelessWidget {
               color: const Color(0xFFA7F3D0),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
+            child: SvgIcon(
               icon,
               color: const Color(0xFF000000),
-              size: 28,
+              size: 22,
             ),
           ),
           const SizedBox(width: 16),

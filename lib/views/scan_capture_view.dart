@@ -8,6 +8,7 @@ import '../providers/app_inventory_provider.dart';
 import '../services/localization_service.dart';
 import 'add_item_form_view.dart';
 import 'settings_view.dart';
+import '../widgets/svg_icon.dart';
 import 'translator_view.dart';
 
 class ScanCaptureView extends StatefulWidget {
@@ -121,7 +122,7 @@ class _ScanCaptureViewState extends State<ScanCaptureView> {
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.settings_outlined, color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF1E293B), size: 26),
+            icon: SvgIcon('settings', color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF1E293B), size: 26),
             tooltip: isHindi ? 'सेटिंग्स' : 'Settings',
             onPressed: _openSettingsView,
           ),
@@ -158,8 +159,8 @@ class _ScanCaptureViewState extends State<ScanCaptureView> {
                               color: const Color(0xFF0EA5E9).withValues(alpha: 0.15),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(
-                              Icons.camera_alt_outlined,
+                            child: const SvgIcon(
+                              'camera',
                               size: 64,
                               color: Color(0xFF0EA5E9),
                             ),
@@ -196,7 +197,7 @@ class _ScanCaptureViewState extends State<ScanCaptureView> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.photo_library_outlined, size: 20),
+                        const SvgIcon('photo_library', size: 20),
                         const SizedBox(width: 8),
                         Text(
                           isHindi ? 'गैलरी से चुनें' : 'Gallery',
@@ -215,7 +216,7 @@ class _ScanCaptureViewState extends State<ScanCaptureView> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.camera_alt, size: 20, color: Colors.white),
+                        const SvgIcon('camera', size: 20, color: Colors.white),
                         const SizedBox(width: 8),
                         Text(
                           isHindi ? 'फोटो लें' : 'Take Photo',

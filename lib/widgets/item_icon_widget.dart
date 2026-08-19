@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'svg_icon.dart';
 
 class ItemIconWidget extends StatelessWidget {
   final String itemId;
@@ -18,7 +18,7 @@ class ItemIconWidget extends StatelessWidget {
     this.emojiHint,
     this.capturedPhotoPath,
     this.size = 48,
-    this.iconSize = 22,
+    this.iconSize = 18,
     this.backgroundColor,
   });
 
@@ -45,74 +45,74 @@ class ItemIconWidget extends StatelessWidget {
     return null;
   }
 
-  dynamic _getVectorIconData() {
+  String _getVectorIconData() {
     final lowerId = itemId.toLowerCase();
     final lowerCat = category.toLowerCase();
 
     // 1. Grains, Atta & Rice
     if (lowerId.contains('atta') || lowerId.contains('grain') || lowerId.contains('wheat')) {
-      return FontAwesomeIcons.wheatAwn;
+      return 'grain';
     }
     if (lowerId.contains('rice') || lowerId.contains('poha') || lowerId.contains('maida') || lowerId.contains('sooji')) {
-      return FontAwesomeIcons.bowlRice;
+      return 'rice';
     }
     if (lowerId.contains('bread') || lowerId.contains('toast') || lowerId.contains('bun')) {
-      return FontAwesomeIcons.breadSlice;
+      return 'bread';
     }
 
     // 2. Dals & Pulses
     if (lowerCat.contains('dal') || lowerCat.contains('pulse') || lowerId.contains('dal') || lowerId.contains('chana') || lowerId.contains('rajma')) {
-      return FontAwesomeIcons.seedling;
+      return 'seedling';
     }
 
     // 3. Spices & Seasoning
     if (lowerCat.contains('spice') || lowerCat.contains('masala') || lowerId.contains('namak') || lowerId.contains('salt')) {
-      return FontAwesomeIcons.pepperHot;
+      return 'spice';
     }
     if (lowerId.contains('sugar') || lowerId.contains('jaggery') || lowerId.contains('gur') || lowerId.contains('cheeni')) {
-      return FontAwesomeIcons.cubes;
+      return 'sugar';
     }
     if (lowerId.contains('chai') || lowerId.contains('tea') || lowerId.contains('coffee')) {
-      return FontAwesomeIcons.mugHot;
+      return 'beverage';
     }
 
     // 4. Dairy & Bakery
     if (lowerId.contains('milk') || lowerId.contains('dahi') || lowerId.contains('paneer') || lowerId.contains('butter') || lowerId.contains('ghee')) {
-      return FontAwesomeIcons.bottleWater;
+      return 'dairy';
     }
     if (lowerCat.contains('dairy')) {
-      return FontAwesomeIcons.cow;
+      return 'animal';
     }
 
     // 5. Oils & Ghee
     if (lowerCat.contains('oil') || lowerId.contains('oil') || lowerId.contains('tel')) {
-      return FontAwesomeIcons.droplet;
+      return 'oil';
     }
 
     // 6. Pooja & Festivals
     if (lowerCat.contains('pooja') || lowerId.contains('diya') || lowerId.contains('incense') || lowerId.contains('agarbatti') || lowerId.contains('kapoor') || lowerId.contains('roli')) {
-      return FontAwesomeIcons.fire;
+      return 'pooja';
     }
     if (lowerCat.contains('sweet') || lowerId.contains('ladoo') || lowerId.contains('mithai') || lowerId.contains('halwa')) {
-      return FontAwesomeIcons.cookie;
+      return 'sweet';
     }
 
     // 7. Cleaning & Hygiene
     if (lowerCat.contains('clean') || lowerId.contains('surf') || lowerId.contains('soap') || lowerId.contains('vim') || lowerId.contains('dettol')) {
-      return FontAwesomeIcons.pumpSoap;
+      return 'clean';
     }
 
     // 8. Medicine & First Aid
     if (lowerCat.contains('medicine') || lowerCat.contains('first aid') || lowerId.contains('dolo') || lowerId.contains('paracetamol') || lowerId.contains('band')) {
-      return FontAwesomeIcons.kitMedical;
+      return 'medical';
     }
 
     // Default Fallbacks by category
     if (lowerCat.contains('vegetable') || lowerCat.contains('fruit')) {
-      return FontAwesomeIcons.carrot;
+      return 'seedling';
     }
 
-    return FontAwesomeIcons.box;
+    return 'box';
   }
 
   Color _getBadgeColor(BuildContext context) {
@@ -187,7 +187,7 @@ class ItemIconWidget extends StatelessWidget {
 
   Widget _buildIconFallback(BuildContext context) {
     final badgeColor = _getBadgeColor(context);
-    final iconData = _getVectorIconData();
+    final iconName = _getVectorIconData();
 
     return Container(
       width: size,
@@ -201,12 +201,11 @@ class ItemIconWidget extends StatelessWidget {
           width: 1.2,
         ),
       ),
-      child: FaIcon(
-        iconData,
+      child: SvgIcon(
+        iconName,
         size: iconSize,
         color: badgeColor,
       ),
     );
   }
 }
-
