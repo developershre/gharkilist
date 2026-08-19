@@ -2,7 +2,7 @@ name: gharkilist
 description: "gharkilist: Smart Household Inventory Tracker for Indian Families."
 publish_to: "none"
 
-version: 1.0.0+1
+version: 1.0.5
 
 environment:
   sdk: ^3.12.2
@@ -39,7 +39,7 @@ flutter:
     - assets/images/
 
 flutter_launcher_icons:
-  android: "launcher_icon"
+  android: true
   ios: true
   image_path: "assets/icon/adaptive_android_logo.png"
   min_sdk_android: 24

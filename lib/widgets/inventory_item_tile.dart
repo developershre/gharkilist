@@ -15,6 +15,7 @@ class InventoryItemTile extends StatelessWidget {
   final VoidCallback? onLongPress;
   final bool isSelected;
   final bool isSelectionMode;
+  final bool isSwiping;
 
   const InventoryItemTile({
     super.key,
@@ -29,6 +30,7 @@ class InventoryItemTile extends StatelessWidget {
     this.onLongPress,
     this.isSelected = false,
     this.isSelectionMode = false,
+    this.isSwiping = false,
   });
 
   @override
@@ -230,41 +232,48 @@ class InventoryItemTile extends StatelessWidget {
                 ),
               ),
 
-              // Right Action Buttons (Hidden in selection mode)
+              // Right Action Buttons (Hidden in selection mode, faded out in swiping mode)
               if (!isSelectionMode)
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: Icon(
-                        Icons.edit_square,
-                        color: primaryGreen,
-                        size: 26,
-                      ),
-                      tooltip: language == AppLanguage.hindi
-                          ? 'संपादित करें'
-                          : 'Edit Item',
-                      padding: const EdgeInsets.all(6),
-                      constraints: const BoxConstraints(),
-                      onPressed: onTap,
-                    ),
+                AnimatedOpacity(
+                  duration: const Duration(milliseconds: 150),
+                  opacity: isSwiping ? 0.0 : 1.0,
+                  child: IgnorePointer(
+                    ignoring: isSwiping,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: Icon(
+                            Icons.edit_square,
+                            color: primaryGreen,
+                            size: 26,
+                          ),
+                          tooltip: language == AppLanguage.hindi
+                              ? 'संपादित करें'
+                              : 'Edit Item',
+                          padding: const EdgeInsets.all(6),
+                          constraints: const BoxConstraints(),
+                          onPressed: onTap,
+                        ),
 
-                    const SizedBox(width: 6),
+                        const SizedBox(width: 6),
 
-                    IconButton(
-                      icon: Icon(
-                        Icons.delete_outline,
-                        color: deleteRed,
-                        size: 26,
-                      ),
-                      tooltip: language == AppLanguage.hindi
-                          ? 'हटाएं'
-                          : 'Delete Item',
-                      padding: const EdgeInsets.all(6),
-                      constraints: const BoxConstraints(),
-                      onPressed: onDeleteTap,
+                        IconButton(
+                          icon: Icon(
+                            Icons.delete_outline,
+                            color: deleteRed,
+                            size: 26,
+                          ),
+                          tooltip: language == AppLanguage.hindi
+                              ? 'हटाएं'
+                              : 'Delete Item',
+                          padding: const EdgeInsets.all(6),
+                          constraints: const BoxConstraints(),
+                          onPressed: onDeleteTap,
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
             ],
           ),

@@ -11,6 +11,7 @@ import 'views/scan_capture_view.dart';
 import 'views/settings_view.dart';
 import 'views/translator_view.dart';
 import 'widgets/gharkilist_logo.dart';
+import 'views/splash_view.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -59,7 +60,7 @@ class GharkilistApp extends StatelessWidget {
         ),
       ),
       themeMode: settings.themeMode,
-      home: const MainHomeScreen(),
+      home: const SplashView(),
     );
   }
 }
@@ -168,7 +169,7 @@ class MainHomeScreen extends StatelessWidget {
         language: settings.language,
         onRefresh: () => inventory.refreshActiveInventory(),
         onListChanged: (newList) => inventory.switchActiveList(newList),
-        onListCreated: (newList) => inventory.createInventoryList(newList.name),
+        onListCreated: (name) => inventory.createInventoryList(name),
         onAddScanTap: () => _openScanView(context),
         onAddBrowseTap: () => _openBrowseView(context),
       ),

@@ -28,7 +28,7 @@ class InventoryHomeView extends StatefulWidget {
   final AppLanguage language;
   final VoidCallback onRefresh;
   final Function(InventoryList newList) onListChanged;
-  final Function(InventoryList newList) onListCreated;
+  final Function(String name) onListCreated;
   final VoidCallback onAddScanTap;
   final VoidCallback onAddBrowseTap;
 
@@ -58,6 +58,7 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
   String _selectedSortOption = 'Default';
   List<CatalogItem> _searchCatalogResults = [];
   Timer? _debounceTimer;
+  final Set<String> _swipingItemIds = {};
 
   @override
   void initState() {
@@ -213,12 +214,8 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
       context: context,
       builder: (ctx) => CreateListDialog(
         isHindi: widget.language == AppLanguage.hindi,
-        onCreate: (name) async {
-          final newList = await DatabaseHelper.instance.createInventory(
-            name,
-            '',
-          );
-          widget.onListCreated(newList);
+        onCreate: (name) {
+          widget.onListCreated(name);
         },
       ),
     );
@@ -636,6 +633,13 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                       ),
                       itemCount: displayItems.length,
                       onReorderItem: _onReorderItems,
+                      proxyDecorator: (Widget child, int index, Animation<double> animation) {
+                        return Material(
+                          color: Colors.transparent,
+                          elevation: 0,
+                          child: child,
+                        );
+                      },
                       itemBuilder: (context, index) {
                         final item = displayItems[index];
                         final displayName = item.catalogItem != null
@@ -649,6 +653,8 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                                 item.nameHi,
                                 widget.language,
                               );
+
+                        final itemIdStr = item.id?.toString() ?? item.catalogId;
 
                         return Dismissible(
                           key: ValueKey(
@@ -670,7 +676,7 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                                   Icons.delete_outline,
                                   color: Colors.white,
                                   size: 24,
-                                ),
+                                ) ,
                                 const SizedBox(width: 6),
                                 Text(
                                   isHindi ? 'हटाएं' : 'Delete',
@@ -683,6 +689,19 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                               ],
                             ),
                           ),
+                          onUpdate: (details) {
+                            final isSwipingNow = details.progress > 0.02;
+                            final wasSwiping = _swipingItemIds.contains(itemIdStr);
+                            if (isSwipingNow != wasSwiping) {
+                              setState(() {
+                                if (isSwipingNow) {
+                                  _swipingItemIds.add(itemIdStr);
+                                } else {
+                                  _swipingItemIds.remove(itemIdStr);
+                                }
+                              });
+                            }
+                          },
                           confirmDismiss: (direction) async {
                             return await showDialog<bool>(
                                   context: context,
@@ -697,8 +716,12 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                                     ),
                                     actions: [
                                       TextButton(
-                                        onPressed: () =>
-                                            Navigator.pop(ctx, false),
+                                        onPressed: () {
+                                          setState(() {
+                                            _swipingItemIds.remove(itemIdStr);
+                                          });
+                                          Navigator.pop(ctx, false);
+                                        },
                                         child: Text(
                                           isHindi ? 'रद्द करें' : 'Cancel',
                                         ),
@@ -722,6 +745,9 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                                 false;
                           },
                           onDismissed: (direction) {
+                            setState(() {
+                              _swipingItemIds.remove(itemIdStr);
+                            });
                             final idx = _localItems.indexWhere((i) => i.id == item.id);
                             if (idx != -1) {
                               _handleDeleteWithUndo(item, idx);
@@ -733,6 +759,7 @@ class _InventoryHomeViewState extends State<InventoryHomeView> {
                               index: index,
                               item: item,
                               language: widget.language,
+                              isSwiping: _swipingItemIds.contains(itemIdStr),
                               onTap: () => _editItem(item),
                               onQuantityChanged: (newQty) async {
                                 if (item.id != null) {
