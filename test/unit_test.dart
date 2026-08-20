@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:gharkilist/data/indian_pantry_catalog.dart';
 import 'package:gharkilist/providers/app_settings_provider.dart';
 import 'package:gharkilist/services/localization_service.dart';
+import 'package:gharkilist/models/inventory_list.dart';
 
 void main() {
   group('LocalizationService Unit Tests', () {
@@ -62,6 +63,31 @@ void main() {
       await newProvider.loadSettings();
       expect(newProvider.language, equals(AppLanguage.hindi));
       expect(newProvider.isHindi, isTrue);
+    });
+  });
+
+  group('InventoryList Model Unit Tests', () {
+    test('copyWith updates fields correctly', () {
+      final list = InventoryList(id: 1, name: 'Main List', iconEmoji: '🏠', isDefault: true);
+      final updated = list.copyWith(name: 'Updated List', isDefault: false);
+
+      expect(updated.id, equals(1));
+      expect(updated.name, equals('Updated List'));
+      expect(updated.iconEmoji, equals('🏠'));
+      expect(updated.isDefault, isFalse);
+      expect(updated.createdAt, equals(list.createdAt));
+    });
+
+    test('toMap and fromMap serialize/deserialize correctly', () {
+      final list = InventoryList(id: 2, name: 'Test List', iconEmoji: '📦', isDefault: false);
+      final map = list.toMap();
+      final fromMap = InventoryList.fromMap(map);
+
+      expect(fromMap.id, equals(list.id));
+      expect(fromMap.name, equals(list.name));
+      expect(fromMap.iconEmoji, equals(list.iconEmoji));
+      expect(fromMap.isDefault, equals(list.isDefault));
+      expect(fromMap.createdAt.toIso8601String(), equals(list.createdAt.toIso8601String()));
     });
   });
 }

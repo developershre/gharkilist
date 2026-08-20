@@ -199,6 +199,24 @@ class AppInventoryProvider extends ChangeNotifier {
     }
   }
 
+  /// Updates an existing custom inventory list.
+  Future<void> updateInventoryList(InventoryList list) async {
+    await DatabaseHelper.instance.updateInventory(list);
+    await refreshAllLists();
+    if (_activeList?.id == list.id) {
+      _activeList = list;
+    }
+    notifyListeners();
+  }
+
+  /// Duplicates an existing inventory list and switches to it.
+  Future<InventoryList> duplicateInventoryList(int listId, String newListName) async {
+    final newList = await DatabaseHelper.instance.duplicateInventory(listId, newListName);
+    await refreshAllLists();
+    await switchActiveList(newList);
+    return newList;
+  }
+
   /// Adds a item to the active inventory list.
   Future<void> addInventoryItem(InventoryItem item) async {
     final itemWithList = item.copyWith(

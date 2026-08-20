@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import '../models/inventory_list.dart';
+import '../providers/app_inventory_provider.dart';
 import '../services/database_helper.dart';
 import '../services/localization_service.dart';
 import '../widgets/svg_icon.dart';
@@ -88,17 +90,78 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
               onPressed: () async {
                 final name = nameController.text.trim();
                 if (name.isNotEmpty) {
-                  final newList = await DatabaseHelper.instance.createInventory(
-                    name,
-                    '',
-                  );
+                  final provider = context.read<AppInventoryProvider>();
+                  final newList = await provider.createInventoryList(name);
                   if (context.mounted) {
-                    Navigator.pop(context);
+                    Navigator.pop(context); // Close dialog
                     widget.onListSelected(newList);
+                    Navigator.pop(context); // Close switcher sheet
                   }
                 }
               },
               child: Text(isHindi ? 'बनाएं' : 'Create List', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _renameList(InventoryList list) {
+    final nameController = TextEditingController(text: list.name);
+    final isHindi = widget.language == AppLanguage.hindi;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(
+            isHindi ? 'सूची का नाम बदलें' : 'Rename Inventory List',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                isHindi ? 'नया नाम लिखें:' : 'Enter New Name:',
+                style: const TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: nameController,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: isHindi ? 'सूची का नाम...' : 'List name...',
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(isHindi ? 'रद्द करें' : 'Cancel', style: const TextStyle(fontSize: 15)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0F172A),
+                foregroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+              ),
+              onPressed: () async {
+                final name = nameController.text.trim();
+                if (name.isNotEmpty && list.id != null) {
+                  final updated = list.copyWith(name: name);
+                  final provider = context.read<AppInventoryProvider>();
+                  await provider.updateInventoryList(updated);
+                  _loadLists();
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                  }
+                }
+              },
+              child: Text(isHindi ? 'सहेजें' : 'Save', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
             ),
           ],
         );
@@ -155,16 +218,53 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
               onPressed: () async {
                 final name = nameController.text.trim();
                 if (name.isNotEmpty && list.id != null) {
-                  final newListName = name;
-                  final newList = await DatabaseHelper.instance.duplicateInventory(list.id!, newListName);
+                  final provider = context.read<AppInventoryProvider>();
+                  final newList = await provider.duplicateInventoryList(list.id!, name);
                   if (context.mounted) {
-                    Navigator.pop(context);
+                    Navigator.pop(context); // Close dialog
                     widget.onListSelected(newList);
                     Navigator.pop(context); // Close switcher sheet
                   }
                 }
               },
               child: Text(isHindi ? 'कॉपी करें' : 'Duplicate', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<bool?> _showDeleteConfirmDialog(InventoryList list) {
+    final isHindi = widget.language == AppLanguage.hindi;
+    final displayName = LocalizationService.getListName(list.name, widget.language);
+
+    return showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(
+            isHindi ? 'सूची हटाएं?' : 'Delete List?',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          content: Text(
+            isHindi
+                ? 'क्या आप "$displayName" को हटाना चाहते हैं? इसके अंदर के सारे सामान भी हटा दिए जाएंगे।'
+                : 'Are you sure you want to delete "$displayName"? All items inside this list will also be permanently deleted.',
+            style: const TextStyle(fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(isHindi ? 'रद्द करें' : 'Cancel', style: const TextStyle(fontSize: 15)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFEF4444),
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(isHindi ? 'हटाएं' : 'Delete', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
             ),
           ],
         );
@@ -212,7 +312,7 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
             children: [
               Expanded(
                 child: Text(
-                  isHindi ? 'सूची बदलें' : 'Select Inventory List',
+                  isHindi ? 'सूची प्रबंधित करें' : 'Manage Inventory Lists',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -289,19 +389,37 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          if (isSelected) ...[
+                            const SvgIcon('check_circle', color: Color(0xFF00C853), size: 18),
+                            const SizedBox(width: 6),
+                          ],
                           IconButton(
-                            icon: const SvgIcon('copy', color: Color(0xFF00C853), size: 18),
+                            constraints: const BoxConstraints(),
+                            padding: const EdgeInsets.all(6),
+                            icon: const SvgIcon('edit', color: Color(0xFF64748B), size: 16),
+                            tooltip: isHindi ? 'नाम बदलें' : 'Rename List',
+                            onPressed: () => _renameList(list),
+                          ),
+                          IconButton(
+                            constraints: const BoxConstraints(),
+                            padding: const EdgeInsets.all(6),
+                            icon: const SvgIcon('copy', color: Color(0xFF00C853), size: 16),
                             tooltip: isHindi ? 'कॉपी बनाएं' : 'Duplicate List',
                             onPressed: () => _duplicateList(list),
                           ),
-                          if (isSelected)
-                            SvgIcon('check_circle', color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0F172A), size: 18),
-                          if (!list.isDefault && list.id != null)
+                          if (_lists.length > 1 && list.id != null)
                             IconButton(
-                              icon: const SvgIcon('delete', color: Color(0xFFEF4444), size: 18),
+                              constraints: const BoxConstraints(),
+                              padding: const EdgeInsets.all(6),
+                              icon: const SvgIcon('delete', color: Color(0xFFEF4444), size: 16),
+                              tooltip: isHindi ? 'हटाएं' : 'Delete List',
                               onPressed: () async {
-                                await DatabaseHelper.instance.deleteInventory(list.id!);
-                                _loadLists();
+                                final confirm = await _showDeleteConfirmDialog(list);
+                                if (confirm == true) {
+                                  final provider = context.read<AppInventoryProvider>();
+                                  await provider.deleteInventoryList(list.id!);
+                                  _loadLists();
+                                }
                               },
                             ),
                         ],
@@ -326,12 +444,10 @@ class _InventorySwitcherSheetState extends State<InventorySwitcherSheet> {
                 children: [
                   const SvgIcon('add', size: 16),
                   const SizedBox(width: 8),
-                  Flexible(
-                    child: Text(
-                      isHindi ? 'नई सूची बनाएं' : 'Create New Inventory List',
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                  Text(
+                    isHindi ? 'नई सूची बनाएं' : 'Create New Inventory List',
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),

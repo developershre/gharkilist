@@ -13,6 +13,22 @@ class InventoryList {
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
+  InventoryList copyWith({
+    int? id,
+    String? name,
+    String? iconEmoji,
+    bool? isDefault,
+    DateTime? createdAt,
+  }) {
+    return InventoryList(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      iconEmoji: iconEmoji ?? this.iconEmoji,
+      isDefault: isDefault ?? this.isDefault,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
   Map<String, dynamic> toMap() {
     return {
       if (id != null) 'id': id,

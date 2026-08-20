@@ -20,6 +20,7 @@ class _SplashViewState extends State<SplashView> with SingleTickerProviderStateM
 
   bool _minTimeElapsed = false;
   bool _navigationTriggered = false;
+  Timer? _timer;
 
   @override
   void initState() {
@@ -48,7 +49,7 @@ class _SplashViewState extends State<SplashView> with SingleTickerProviderStateM
     _controller.forward();
 
     // Set a minimum timer of 2000 milliseconds before transitioning out
-    Timer(const Duration(milliseconds: 2000), () {
+    _timer = Timer(const Duration(milliseconds: 2000), () {
       if (mounted) {
         setState(() {
           _minTimeElapsed = true;
@@ -60,6 +61,7 @@ class _SplashViewState extends State<SplashView> with SingleTickerProviderStateM
 
   @override
   void dispose() {
+    _timer?.cancel();
     _controller.dispose();
     super.dispose();
   }

@@ -244,8 +244,50 @@ class DatabaseHelper {
 
   Future<int> deleteInventory(int listId) async {
     final db = await instance.database;
+
+    // Check if the list being deleted is default
+    final List<Map<String, dynamic>> maps = await db.query(
+      'pantry_inventories',
+      where: 'id = ?',
+      whereArgs: [listId],
+    );
+    if (maps.isEmpty) return 0;
+    final isDefault = (maps.first['is_default'] as int) == 1;
+
+    // Delete items in that list first
     await db.delete('inventory_items', where: 'inventory_id = ?', whereArgs: [listId]);
-    return await db.delete('pantry_inventories', where: 'id = ? AND is_default = 0', whereArgs: [listId]);
+
+    // Delete the list itself
+    final count = await db.delete('pantry_inventories', where: 'id = ?', whereArgs: [listId]);
+
+    // If it was the default list, assign a new default list
+    if (isDefault) {
+      final List<Map<String, dynamic>> remaining = await db.query(
+        'pantry_inventories',
+        orderBy: 'id ASC',
+        limit: 1,
+      );
+      if (remaining.isNotEmpty) {
+        final nextId = remaining.first['id'] as int;
+        await db.update(
+          'pantry_inventories',
+          {'is_default': 1},
+          where: 'id = ?',
+          whereArgs: [nextId],
+        );
+      }
+    }
+    return count;
+  }
+
+  Future<int> updateInventory(InventoryList list) async {
+    final db = await instance.database;
+    return await db.update(
+      'pantry_inventories',
+      list.toMap(),
+      where: 'id = ?',
+      whereArgs: [list.id],
+    );
   }
 
   // ==================== CATALOG METHODS ====================

@@ -11,6 +11,7 @@ import '../providers/app_settings_provider.dart';
 import '../services/database_helper.dart';
 import '../services/localization_service.dart';
 import '../widgets/svg_icon.dart';
+import 'inventory_switcher_sheet.dart';
 
 class SettingsView extends StatefulWidget {
   final InventoryList activeList;
@@ -29,25 +30,27 @@ class SettingsView extends StatefulWidget {
 }
 
 class _SettingsViewState extends State<SettingsView> {
-  int _itemCount = 0;
-  bool _isLoading = true;
+  bool _isLoading = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadStats();
-  }
-
-  Future<void> _loadStats() async {
-    if (widget.activeList.id != null) {
-      final count = await DatabaseHelper.instance.getInventoryCountForList(widget.activeList.id!);
-      if (mounted) {
-        setState(() {
-          _itemCount = count;
-          _isLoading = false;
-        });
-      }
-    }
+  void _showManageListsSheet(
+    BuildContext context,
+    AppSettingsProvider settings,
+    AppInventoryProvider inventory,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return InventorySwitcherSheet(
+          activeList: inventory.activeList ?? widget.activeList,
+          language: settings.language,
+          onListSelected: (newList) {
+            inventory.switchActiveList(newList);
+          },
+        );
+      },
+    );
   }
 
   Future<void> _exportBackup(AppSettingsProvider settings) async {
@@ -183,7 +186,6 @@ class _SettingsViewState extends State<SettingsView> {
         if (confirm == true) {
           await DatabaseHelper.instance.importBackupData(lists);
           await inventory.preloadData();
-          await _loadStats();
 
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -215,6 +217,8 @@ class _SettingsViewState extends State<SettingsView> {
 
   void _showClearListConfirmation(AppSettingsProvider settings, AppInventoryProvider inventory) {
     final isHindi = settings.isHindi;
+    final activeList = inventory.activeList ?? widget.activeList;
+    final itemCount = inventory.inventoryItems.length;
 
     showDialog(
       context: context,
@@ -227,8 +231,8 @@ class _SettingsViewState extends State<SettingsView> {
           ),
           content: Text(
             isHindi
-                ? 'क्या आप "${widget.activeList.name}" से सभी $_itemCount सामान हटाना चाहते हैं? यह क्रिया वापस नहीं ली जा सकती।'
-                : 'Are you sure you want to remove all $_itemCount items from "${widget.activeList.name}"? This action cannot be undone.',
+                ? 'क्या आप "${activeList.name}" से सभी $itemCount सामान हटाना चाहते हैं? यह क्रिया वापस नहीं ली जा सकती।'
+                : 'Are you sure you want to remove all $itemCount items from "${activeList.name}"? This action cannot be undone.',
             style: const TextStyle(fontSize: 14),
           ),
           actions: [
@@ -248,7 +252,6 @@ class _SettingsViewState extends State<SettingsView> {
                   Navigator.pop(dialogContext);
                 }
                 widget.onListCleared();
-                _loadStats();
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -449,7 +452,35 @@ class _SettingsViewState extends State<SettingsView> {
 
           const SizedBox(height: 18),
 
-          // Section 3: Data Management
+          // Section 3: List Management
+          _buildSectionHeader(isHindi ? 'लिस्ट प्रबंधन' : 'List Management', subtextColor),
+          const SizedBox(height: 6),
+          _buildCardGroup(
+            cardBgColor: cardBgColor,
+            borderColor: borderColor,
+            children: [
+              ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                leading: SvgIcon('tune', color: primaryGreen, size: 20),
+                title: Text(
+                  isHindi ? 'लिस्ट प्रबंधित करें' : 'Manage Lists',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: textColor),
+                ),
+                subtitle: Text(
+                  isHindi ? 'सभी लिस्ट का नाम बदलें, कॉपी करें या हटाएं' : 'Create, rename, duplicate or delete lists',
+                  style: TextStyle(fontSize: 12, color: subtextColor),
+                ),
+                trailing: SvgIcon('chevron_right', color: subtextColor, size: 16),
+                onTap: () {
+                  _showManageListsSheet(context, settings, inventory);
+                },
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 18),
+
+          // Section 4: Data Management
           _buildSectionHeader(isHindi ? 'डेटा प्रबंधन' : 'Data Management', subtextColor),
           const SizedBox(height: 6),
           _buildCardGroup(
@@ -464,13 +495,11 @@ class _SettingsViewState extends State<SettingsView> {
                   style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFFEF4444)),
                 ),
                 subtitle: Text(
-                  '${widget.activeList.name} (${_isLoading ? "..." : "$_itemCount"} ${isHindi ? "सामान" : "items"})',
+                  '${(inventory.activeList ?? widget.activeList).name} (${inventory.inventoryItems.length} ${isHindi ? "सामान" : "items"})',
                   style: TextStyle(fontSize: 12, color: subtextColor),
                 ),
-                trailing: _isLoading
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                    : SvgIcon('chevron_right', color: subtextColor, size: 16),
-                onTap: _itemCount > 0 ? () => _showClearListConfirmation(settings, inventory) : null,
+                trailing: SvgIcon('chevron_right', color: subtextColor, size: 16),
+                onTap: inventory.inventoryItems.isNotEmpty ? () => _showClearListConfirmation(settings, inventory) : null,
               ),
               Divider(height: 1, color: borderColor),
               ListTile(
@@ -545,13 +574,13 @@ class _SettingsViewState extends State<SettingsView> {
     required Color borderColor,
     required List<Widget> children,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: cardBgColor,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: borderColor),
-      ),
+    return Material(
+      color: cardBgColor,
       clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: borderColor),
+      ),
       child: Column(
         children: children,
       ),

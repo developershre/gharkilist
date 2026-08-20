@@ -57,7 +57,6 @@ class EmptyStateView extends StatelessWidget {
             onListSelected: (list) {
               if (onListChanged != null) onListChanged!(list);
             },
-            onCreateNewTap: () {},
           ),
           Expanded(
             child: EmptyInventoryPlaceholder(
