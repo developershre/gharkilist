@@ -114,7 +114,7 @@ lib/
 
 5. **Build optimized release APK**:
    ```bash
-   flutter build apk --split-per-abi --obfuscate --split-debug-info=build/symbols
+   flutter build apk --obfuscate --split-debug-info=build/symbols
    ```
 
 ---

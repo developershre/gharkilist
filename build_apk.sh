@@ -32,7 +32,7 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 echo "==========================================="
-echo "Building APK for $DEFAULT_NAME"
+echo "Building Universal APK for $DEFAULT_NAME"
 echo "Target Name:    $APK_NAME"
 echo "Target Version: $APK_VERSION"
 echo "==========================================="
@@ -42,40 +42,44 @@ export APK_NAME
 export APK_VERSION
 
 # Run flutter build
-flutter build apk --split-per-abi
+flutter build apk
 
-# Find and copy output to output directory
-echo "Locating built APK files..."
+# Locate the newly built APK file
+echo "Locating built APK file..."
 mkdir -p ./output
+GRADLE_APK="build/app/outputs/apk/release/${APK_NAME}-v${APK_VERSION}.apk"
+FLUTTER_APK="build/app/outputs/flutter-apk/app-release.apk"
+STANDARD_GRADLE_APK="build/app/outputs/apk/release/app-release.apk"
 
-ARM64_APK=$(find build/app/outputs/apk/ -name "*arm64-v8a.apk" | head -n 1)
-ARM32_APK=$(find build/app/outputs/apk/ -name "*armeabi-v7a.apk" | head -n 1)
-X86_APK=$(find build/app/outputs/apk/ -name "*x86_64.apk" | head -n 1)
+if [ -f "$GRADLE_APK" ]; then
+    UNIVERSAL_APK="$GRADLE_APK"
+elif [ -f "$FLUTTER_APK" ]; then
+    UNIVERSAL_APK="$FLUTTER_APK"
+elif [ -f "$STANDARD_GRADLE_APK" ]; then
+    UNIVERSAL_APK="$STANDARD_GRADLE_APK"
+else
+    # Fallback to the most recently modified APK in the build output directory
+    UNIVERSAL_APK=$(find build/app/outputs/ -name "*.apk" -type f -exec stat -c "%Y %n" {} + 2>/dev/null | sort -n | tail -n 1 | cut -d' ' -f2-)
+fi
 
-if [ -f "$ARM64_APK" ] || [ -f "$ARM32_APK" ] || [ -f "$X86_APK" ]; then
+if [ -f "$UNIVERSAL_APK" ]; then
+    FINAL_APK="./output/${APK_NAME}-v${APK_VERSION}.apk"
+    cp "$UNIVERSAL_APK" "$FINAL_APK"
+
     echo "-------------------------------------------"
-    echo "Success! Split APKs copied to output folder:"
-    
-    if [ -f "$ARM64_APK" ]; then
-        cp "$ARM64_APK" "./output/${APK_NAME}-v${APK_VERSION}-Modern_Phones-64bit.apk"
-        echo "👉 Modern Phones (64-bit ARM): ./output/${APK_NAME}-v${APK_VERSION}-Modern_Phones-64bit.apk"
-    fi
-    if [ -f "$ARM32_APK" ]; then
-        cp "$ARM32_APK" "./output/${APK_NAME}-v${APK_VERSION}-Older_Phones-32bit.apk"
-        echo "👉 Older Phones (32-bit ARM):  ./output/${APK_NAME}-v${APK_VERSION}-Older_Phones-32bit.apk"
-    fi
-    if [ -f "$X86_APK" ]; then
-        cp "$X86_APK" "./output/${APK_NAME}-v${APK_VERSION}-PC_Emulators-x86_64.apk"
-        echo "👉 PC Emulators / ChromeOS:    ./output/${APK_NAME}-v${APK_VERSION}-PC_Emulators-x86_64.apk"
-    fi
+    echo "Success! Universal APK ready:"
+    echo "👉 $FINAL_APK"
+    echo "   Size: $(du -h "$FINAL_APK" | cut -f1)"
     echo "-------------------------------------------"
-    echo "💡 HELP: WHICH APK SHOULD I INSTALL?"
-    echo "• If your phone is modern (bought in the last 6-8 years), install the 'Modern_Phones-64bit.apk'."
-    echo "• If it is an older or budget device, install the 'Older_Phones-32bit.apk'."
-    echo "• If you are running on an emulator on your PC, install the 'PC_Emulators-x86_64.apk'."
+    echo "💡 You can share this single APK file with anyone."
+    echo "   It works on all phones (ARM64, ARM32, x86_64)."
+    echo ""
+    echo "⚠️  NOTE: If you previously had a split-ABI version"
+    echo "   installed, you MUST uninstall it first before"
+    echo "   installing this universal APK."
     echo "-------------------------------------------"
 else
-    echo "Error: Could not locate the generated APKs."
+    echo "Error: Could not locate the generated Universal APK."
     echo "Please check the build logs above."
     exit 1
 fi

@@ -2,7 +2,7 @@ name: gharkilist
 description: "gharkilist: Smart Household Inventory Tracker for Indian Families."
 publish_to: "none"
 
-version: 0.0.6
+version: 0.0.6+2
 
 environment:
   sdk: ^3.12.2
