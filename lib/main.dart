@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'providers/app_inventory_provider.dart';
 import 'providers/app_settings_provider.dart';
+import 'providers/auth_provider.dart';
 import 'services/localization_service.dart';
 import 'views/catalog_browse_view.dart';
 import 'views/inventory_home_view.dart';
@@ -11,6 +12,7 @@ import 'views/settings_view.dart';
 import 'views/translator_view.dart';
 import 'widgets/gharkilist_logo.dart';
 import 'views/splash_view.dart';
+import 'views/auth_view.dart';
 import 'widgets/svg_icon.dart';
 
 void main() {
@@ -19,6 +21,7 @@ void main() {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AppSettingsProvider()),
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(
           create: (_) => AppInventoryProvider()..preloadData(),
         ),
@@ -117,6 +120,7 @@ class MainHomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final settings = context.watch<AppSettingsProvider>();
     final inventory = context.watch<AppInventoryProvider>();
+    final auth = context.watch<AuthProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (inventory.isInitialLoading || inventory.activeList == null) {
@@ -134,6 +138,49 @@ class MainHomeScreen extends StatelessWidget {
         titleSpacing: 16,
         title: GharkiListLogoWidget(language: settings.language),
         actions: [
+          if (auth.currentUser != null) ...[
+            GestureDetector(
+              onTap: () => _openSettingsView(context),
+              child: Center(
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                    border: Border.all(
+                      color: const Color(0xFF00C853),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Text(
+                    auth.currentUser!.avatarEmoji,
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+          ] else ...[
+            IconButton(
+              icon: Icon(
+                Icons.account_circle_outlined,
+                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF1E293B),
+                size: 22,
+              ),
+              tooltip: settings.language == AppLanguage.english
+                  ? 'Login or Register'
+                  : 'लॉगिन या रजिस्टर करें',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AuthView()),
+                );
+              },
+            ),
+            const SizedBox(width: 4),
+          ],
           IconButton(
             icon: SvgIcon(
               'settings',

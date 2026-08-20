@@ -38,7 +38,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       pathString,
-      version: 6,
+      version: 7,
       onConfigure: (db) async {
         await db.rawQuery('PRAGMA journal_mode = WAL');
       },
@@ -59,6 +59,17 @@ class DatabaseHelper {
         name TEXT NOT NULL,
         icon_emoji TEXT NOT NULL,
         is_default INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        display_name TEXT NOT NULL,
+        avatar_emoji TEXT NOT NULL,
         created_at TEXT NOT NULL
       )
     ''');
@@ -120,6 +131,17 @@ class DatabaseHelper {
         name TEXT NOT NULL,
         icon_emoji TEXT NOT NULL,
         is_default INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        display_name TEXT NOT NULL,
+        avatar_emoji TEXT NOT NULL,
         created_at TEXT NOT NULL
       )
     ''');
@@ -570,5 +592,26 @@ class DatabaseHelper {
         }
       }
     });
+  }
+
+  // ==================== USER METHODS ====================
+
+  Future<Map<String, dynamic>?> getUser(String username) async {
+    final db = await instance.database;
+    final results = await db.query(
+      'users',
+      where: 'username = ?',
+      whereArgs: [username.toLowerCase().trim()],
+      limit: 1,
+    );
+    if (results.isEmpty) return null;
+    return results.first;
+  }
+
+  Future<int> insertUser(Map<String, dynamic> userRow) async {
+    final db = await instance.database;
+    final row = Map<String, dynamic>.from(userRow);
+    row['username'] = (row['username'] as String).toLowerCase().trim();
+    return await db.insert('users', row);
   }
 }

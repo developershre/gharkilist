@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_inventory_provider.dart';
 import '../providers/app_settings_provider.dart';
+import '../providers/auth_provider.dart';
 import '../services/localization_service.dart';
 import '../main.dart';
 
@@ -70,6 +71,7 @@ class _SplashViewState extends State<SplashView> with SingleTickerProviderStateM
     if (!mounted || _navigationTriggered) return;
 
     final inventory = context.read<AppInventoryProvider>();
+
     if (_minTimeElapsed && !inventory.isInitialLoading && inventory.activeList != null) {
       _navigationTriggered = true;
       Navigator.pushReplacement(
@@ -101,6 +103,7 @@ class _SplashViewState extends State<SplashView> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     final settings = context.watch<AppSettingsProvider>();
     context.watch<AppInventoryProvider>();
+    context.watch<AuthProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // Trigger navigation check whenever provider properties update in case loading completes after the minimum timer

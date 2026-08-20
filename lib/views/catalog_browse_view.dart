@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../models/catalog_item.dart';
 import '../models/inventory_item.dart';
 import '../providers/app_inventory_provider.dart';
-import '../services/database_helper.dart';
 import '../services/catalog_cache.dart';
 import '../services/localization_service.dart';
 import '../widgets/gharkilist_logo.dart';

@@ -8,9 +8,11 @@ import 'package:share_plus/share_plus.dart';
 import '../models/inventory_list.dart';
 import '../providers/app_inventory_provider.dart';
 import '../providers/app_settings_provider.dart';
+import '../providers/auth_provider.dart';
 import '../services/database_helper.dart';
 import '../services/localization_service.dart';
 import '../widgets/svg_icon.dart';
+import 'auth_view.dart';
 import 'inventory_switcher_sheet.dart';
 
 class SettingsView extends StatefulWidget {
@@ -273,6 +275,7 @@ class _SettingsViewState extends State<SettingsView> {
   Widget build(BuildContext context) {
     final settings = context.watch<AppSettingsProvider>();
     final inventory = context.watch<AppInventoryProvider>();
+    final auth = context.watch<AuthProvider>();
 
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -300,6 +303,126 @@ class _SettingsViewState extends State<SettingsView> {
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
           children: [
+          if (auth.currentUser != null) ...[
+            _buildSectionHeader(isHindi ? 'प्रोफ़ाइल' : 'Profile', subtextColor),
+            const SizedBox(height: 6),
+            _buildCardGroup(
+              cardBgColor: cardBgColor,
+              borderColor: borderColor,
+              children: [
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  leading: CircleAvatar(
+                    backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                    radius: 24,
+                    child: Text(
+                      auth.currentUser!.avatarEmoji,
+                      style: const TextStyle(fontSize: 24),
+                    ),
+                  ),
+                  title: Text(
+                    auth.currentUser!.displayName,
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
+                  ),
+                  subtitle: Text(
+                    '@${auth.currentUser!.username}',
+                    style: TextStyle(fontSize: 12, color: subtextColor),
+                  ),
+                  trailing: TextButton.icon(
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFFEF4444),
+                    ),
+                    icon: const Icon(Icons.logout, size: 16),
+                    label: Text(
+                      isHindi ? 'लॉगआउट' : 'Logout',
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                    ),
+                    onPressed: () async {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (dialogContext) {
+                          return AlertDialog(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            title: Text(
+                              isHindi ? 'लॉगआउट करें?' : 'Confirm Logout?',
+                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            ),
+                            content: Text(
+                              isHindi
+                                  ? 'क्या आप अपने खाते से लॉगआउट करना चाहते हैं?'
+                                  : 'Are you sure you want to log out of your profile?',
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(dialogContext, false),
+                                child: Text(isHindi ? 'रद्द करें' : 'Cancel'),
+                              ),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFEF4444),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                                onPressed: () => Navigator.pop(dialogContext, true),
+                                child: Text(isHindi ? 'लॉगआउट' : 'Logout', style: const TextStyle(fontWeight: FontWeight.bold)),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+
+                      if (confirm == true) {
+                        await auth.logout();
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+          ] else ...[
+            _buildSectionHeader(isHindi ? 'खाता' : 'Account', subtextColor),
+            const SizedBox(height: 6),
+            _buildCardGroup(
+              cardBgColor: cardBgColor,
+              borderColor: borderColor,
+              children: [
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  leading: CircleAvatar(
+                    backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                    radius: 24,
+                    child: Icon(
+                      Icons.person_outline,
+                      size: 24,
+                      color: primaryGreen,
+                    ),
+                  ),
+                  title: Text(
+                    isHindi ? 'लॉगिन या रजिस्टर करें' : 'Login or Register',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: textColor),
+                  ),
+                  subtitle: Text(
+                    isHindi ? 'अपनी सूचियों को सुरक्षित करें' : 'Secure your household lists',
+                    style: TextStyle(fontSize: 12, color: subtextColor),
+                  ),
+                  trailing: Icon(
+                    Icons.chevron_right,
+                    color: subtextColor,
+                    size: 20,
+                  ),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const AuthView()),
+                    );
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+          ],
           // Section 1: Appearance & Language
           _buildSectionHeader(isHindi ? 'दिखावट व भाषा' : 'Appearance & Language', subtextColor),
           const SizedBox(height: 6),

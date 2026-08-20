@@ -131,16 +131,18 @@ class _OptionRow extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 54,
-            height: 54,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
               color: const Color(0xFFA7F3D0),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: SvgIcon(
-              icon,
-              color: const Color(0xFF000000),
-              size: 22,
+            child: Center(
+              child: SvgIcon(
+                icon,
+                color: const Color(0xFF000000),
+                size: 20,
+              ),
             ),
           ),
           const SizedBox(width: 16),

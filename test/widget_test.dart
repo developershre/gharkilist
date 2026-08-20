@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:gharkilist/main.dart';
 import 'package:gharkilist/providers/app_inventory_provider.dart';
 import 'package:gharkilist/providers/app_settings_provider.dart';
+import 'package:gharkilist/providers/auth_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -19,6 +20,7 @@ void main() {
       MultiProvider(
         providers: [
           ChangeNotifierProvider(create: (_) => AppSettingsProvider()),
+          ChangeNotifierProvider(create: (_) => AuthProvider()),
           ChangeNotifierProvider(create: (_) => AppInventoryProvider()..preloadData()),
         ],
         child: const GharkilistApp(),
